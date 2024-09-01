@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the state machine"
+    },
+    "states": {
+      "type": "array",
+      "description": "List of states in the state machine",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the state"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "description": "List of transitions between states",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "State from which the transition starts"
+          },
+          "to": {
+            "type": "string",
+            "description": "State to which the transition leads"
+          },
+          "event": {
+            "type": "string",
+            "description": "Event that triggers the transition"
+          },
+          "condition": {
+            "type": ["string", "null"],
+            "description": "Optional condition for the transition"
+          }
+        },
+        "required": ["from", "to", "event"],
+        "additionalProperties": false
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "List of events related to state transitions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the event"
+          },
+          "command": {
+            "type": ["string", "null"],
+            "description": "Optional command related to the event"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["name", "states", "transitions", "events"],
+  "additionalProperties": false
+}

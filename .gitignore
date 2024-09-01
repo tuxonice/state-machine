@@ -1,0 +1,9 @@
+/vendor
+.idea
+/docker-bin
+/docker
+docker-compose.yml
+.phpunit.result.cache
+.phpunit.cache
+composer.lock
+/Makefile
