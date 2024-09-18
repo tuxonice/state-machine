@@ -3,7 +3,7 @@ An agnostic State Machine PHP Package that provides flexible, framework-independ
 
 ### Sample
 
-```
+```mermaid
 stateDiagram-v2
     [*] --> Created: Create Order
     Created --> PendingPayment : Start Payment Process
