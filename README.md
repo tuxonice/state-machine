@@ -7,174 +7,134 @@ An agnostic State Machine PHP Package that provides flexible, framework-independ
 
 ## Usage
 
-### Define a state machine definition
+### Define you business model
+
+This state machine represents the flow of how a real estate agency interacts with a client from the first point of contact until the deal is closed or the client exits the process.
+
+#### Real Estate Agency Client Interaction State Machine Example
+
+**States:**
+
+- Initial Contact: Client has contacted the agency for the first time (e.g., via a phone call, email, or website form).
+- Qualification: The agency qualifies the client by determining their needs, preferences, and budget.
+- Property Search: The agent is actively searching for properties that meet the client’s criteria.
+- Property Viewing: The client is viewing one or more properties.
+- Offer/Negotiation: The client has made an offer, and the agent is negotiating on their behalf.
+- Contract Signing: The client is signing the contract after a successful negotiation.
+- Deal Closed: The deal is successfully closed, and the client has purchased or rented the property.
+- Client Exit: The client leaves the process without closing the deal, either by choice or because no suitable property was found.
+
+**Events/Transitions:**
+
+- Client Inquires: Client contacts the agency for the first time (moves from Idle to Initial Contact).
+- Agent Qualifies Client: Agent gathers information about the client’s needs, preferences, and budget (moves from Initial Contact to Qualification).
+- Start Property Search: Agent starts searching for properties (moves from Qualification to Property Search).
+- Property Found: Agent finds a potential property for the client (moves from Property Search to Property Viewing).
+- Client Interested in Property: Client is interested in one or more properties (moves from Property Viewing to Offer/Negotiation).
+- Successful Negotiation: An agreement is reached on the terms (moves from Offer/Negotiation to Contract Signing).
+- Deal Completed: The contract is signed, and the deal is closed (moves from Contract Signing to Deal Closed).
+- No Suitable Property Found: No property was found, or the client is no longer interested (moves from Property Search to Client Exit).
+- Client Declines Offer: Client declines the offer after viewing properties (moves from Offer/Negotiation to Client Exit).
+- Client Walks Away: Client decides to leave the process at any stage (transitions to Client Exit from any previous state).
+
+#### Explanation:
+
+The client interaction starts with Initial Contact when the client first reaches out to the agency.
+
+The agent then moves to Qualification, where they determine the client’s requirements, budget, and preferences.
+
+Once the client's profile is established, the agent enters Property Search, looking for suitable properties.
+
+When a property is found, the client moves to the Property Viewing stage to visit one or more properties.
+
+If the client is interested, the process moves to Offer/Negotiation where the agent negotiates with the property owner on behalf of the client.
+
+If the negotiation is successful, the process transitions to Contract Signing and finally to Deal Closed when the agreement is finalized.
+
+At various stages (like Property Search, Viewing, or Negotiation), the client may decide to exit the process, and the system moves to Client Exit
+
+### State machine definition file
 
 **state-machine.json**
 ```json
 {
-  "name": "State machine name",
+  "name": "Real Estate Agency Client Interaction",
   "states": [
     {
-      "name": "New"
+      "name": "Idle"
     },
     {
-      "name": "Created"
+      "name": "Initial Contact"
     },
     {
-      "name": "PendingPayment"
+      "name": "Qualification"
     },
     {
-      "name": "CheckPayment"
+      "name": "Property Search"
     },
     {
-      "name": "Cancelled"
+      "name": "Property Viewing"
     },
     {
-      "name": "PaymentAuthorized"
+      "name": "Offer/Negotiation"
     },
     {
-      "name": "PaymentFailed"
+      "name": "Contract Signing"
     },
     {
-      "name": "PreparingShipment"
+      "name": "Deal Closed"
     },
     {
-      "name": "ShipmentReady"
-    },
-    {
-      "name": "Invoicing"
-    },
-    {
-      "name": "Shipped"
-    },
-    {
-      "name": "Delivered"
-    },
-    {
-      "name": "Completed"
+      "name": "Client Exit"
     }
   ],
   "transitions": [
     {
-      "from": "New",
-      "to": "Created",
-      "event": "Create Order",
-      "condition": "Tlab\\StateMachine\\Conditions\\SampleCondition"
-    },
-    {
-      "from": "Created",
-      "to": "PendingPayment",
-      "event": "Start Payment Process",
-      "condition": null
-    },
-    {
-      "from": "PendingPayment",
-      "to": "CheckPayment",
-      "event": "Check Payment Status",
-      "condition": null
-    },
-    {
-      "from": "CheckPayment",
-      "to": "PaymentAuthorized",
-      "event": "Payment OK",
-      "condition": null
-    },
-    {
-      "from": "CheckPayment",
-      "to": "PaymentFailed",
-      "event": "Payment Not OK",
-      "condition": null
-    },
-    {
-      "from": "PaymentFailed",
-      "to": "Cancelled",
-      "event": "Order Cancelled",
-      "condition": null
-    },
-    {
-      "from": "PaymentAuthorized",
-      "to": "PreparingShipment",
-      "event": "Start Shipment Preparation",
-      "condition": null
-    },
-    {
-      "from": "PreparingShipment",
-      "to": "ShipmentReady",
-      "event": "Shipment Prepared",
-      "condition": null
-    },
-    {
-      "from": "ShipmentReady",
-      "to": "Invoicing",
-      "event": "Generate Invoice",
-      "condition": null
-    },
-    {
-      "from": "Invoicing",
-      "to": "Shipped",
-      "event": "Shipment Dispatched",
-      "condition": null
-    },
-    {
-      "from": "Shipped",
-      "to": "Delivered",
-      "event": "Shipment Delivered",
-      "condition": null
-    },
-    {
-      "from": "Delivered",
-      "to": "Completed",
-      "event": "Complete Order",
+      "from": "Initial Contact",
+      "to": "New Request",
+      "event": "Client Submits Request",
       "condition": null
     }
   ],
   "events": [
     {
-      "name": "Create Order",
-      "command": "Tlab\\StateMachine\\Commands\\SampleCommand"
-    },
-    {
-      "name": "Start Payment Process",
+      "name": "Client Inquires",
       "command": null
     },
     {
-      "name": "Check Payment Status",
+      "name": "Agent Qualifies Client",
       "command": null
     },
     {
-      "name": "Payment OK",
+      "name": "Start Property Search",
       "command": null
     },
     {
-      "name": "Payment Not OK",
+      "name": "Property Found",
       "command": null
     },
     {
-      "name": "Order Cancelled",
+      "name": "Client Interested in Property",
       "command": null
     },
     {
-      "name": "Start Shipment Preparation",
+      "name": "Successful Negotiation",
       "command": null
     },
     {
-      "name": "Shipment Prepared",
+      "name": "Deal Completed",
       "command": null
     },
     {
-      "name": "Generate Invoice",
+      "name": "No Suitable Property Found",
       "command": null
     },
     {
-      "name": "Shipment Dispatched",
+      "name": "Client Declines Offer",
       "command": null
     },
     {
-      "name": "Shipment Delivered",
-      "command": null
-    },
-    {
-      "name": "Complete Order",
+      "name": "Client Walks Away",
       "command": null
     }
   ]
