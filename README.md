@@ -53,6 +53,8 @@ If the negotiation is successful, the process transitions to Contract Signing an
 
 At various stages (like Property Search, Viewing, or Negotiation), the client may decide to exit the process, and the system moves to Client Exit
 
+> Event names should be verbs/actions like ship, pay, authorize, while state names must express that something happened or will happen (like paid or payment pending, closed, cancelled).
+
 ### State machine definition file
 
 **state-machine.json**
