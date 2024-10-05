@@ -36,4 +36,38 @@ class StateMachineTest extends TestCase
             ]
         ));
     }
+
+    public function testCanMoveFromState1ToState2(): void
+    {
+        $definitionJson = file_get_contents(dirname(__DIR__) . '/Fixtures/sample-1.json');
+        $stateMachineRunner = new StateMachineRunner($definitionJson);
+
+        $this->assertEquals(
+            'S2',
+            $stateMachineRunner->run(
+                'S1',
+                'EV1',
+                [
+                    'test-key-1' => 'test-value1'
+                ]
+            )
+        );
+    }
+
+    public function testCanNotMoveFromState1ToState3(): void
+    {
+        $definitionJson = file_get_contents(dirname(__DIR__) . '/Fixtures/sample-1.json');
+        $stateMachineRunner = new StateMachineRunner($definitionJson);
+
+        $this->assertEquals(
+            'S1',
+            $stateMachineRunner->run(
+                'S1',
+                'EV2',
+                [
+                    'test-key-1' => 'test-value1'
+                ]
+            )
+        );
+    }
 }

@@ -1,0 +1,38 @@
+{
+  "name": "State machine name with 3 states",
+  "states": [
+    {
+      "name": "S1"
+    },
+    {
+      "name": "S2"
+    },
+    {
+      "name": "S3"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "S1",
+      "to": "S2",
+      "event": "EV1",
+      "condition": null
+    },
+    {
+      "from": "S2",
+      "to": "S3",
+      "event": "EV2",
+      "condition": null
+    }
+  ],
+  "events": [
+    {
+      "name": "EV1",
+      "command": null
+    },
+    {
+      "name": "EV2",
+      "command": null
+    }
+  ]
+}

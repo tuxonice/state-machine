@@ -168,17 +168,19 @@ $newState = $stateMachineRunner->run('Created', 'Start Payment Process', $data);
 ### Sample
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Created: Create Order
-    Created --> PendingPayment : Start Payment Process
-    PendingPayment --> CheckPayment : Check Payment Status
-    CheckPayment --> PaymentAuthorized : Payment OK
-    CheckPayment --> PaymentFailed : Payment Not OK
-    PaymentFailed --> Cancelled : Order Cancelled
-    PaymentAuthorized --> PreparingShipment : Start Shipment Preparation
-    PreparingShipment --> ShipmentReady : Shipment Prepared
-    ShipmentReady --> Invoicing : Generate Invoice
-    Invoicing --> Shipped : Shipment Dispatched
-    Shipped --> Delivered : Shipment Delivered
-    Delivered --> Completed : Complete Order
+stateDiagram
+    [*] --> Initial_Contact : Client Inquires
+    Initial_Contact --> Qualification : Agent Qualifies Client
+    Qualification --> Property_Search : Start Property Search
+    Property_Search --> Property_Viewing : Property Found
+    Property_Viewing --> Offer_Negotiation : Client Interested
+    Offer_Negotiation --> Contract_Signing : Successful Negotiation
+    Contract_Signing --> Deal_Closed : Deal Completed
+    Deal_Closed --> [*]
+    
+    Property_Search --> Client_Exit : No Suitable Property Found
+    Property_Viewing --> Client_Exit : Client Declines Offer
+    Offer_Negotiation --> Client_Exit : Client Walks Away
+    Client_Exit --> [*]
 ```
+
