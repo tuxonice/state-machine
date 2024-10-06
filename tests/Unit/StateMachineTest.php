@@ -70,4 +70,21 @@ class StateMachineTest extends TestCase
             )
         );
     }
+
+    public function testIfCondition(): void
+    {
+        $definitionJson = file_get_contents(dirname(__DIR__) . '/Fixtures/sample-2.json');
+        $stateMachineRunner = new StateMachineRunner($definitionJson);
+
+        $this->assertEquals(
+            'S3',
+            $stateMachineRunner->run(
+                'S2',
+                'EV2',
+                [
+                    'test-key-1' => 'test-value1'
+                ]
+            )
+        );
+    }
 }
