@@ -7,6 +7,7 @@ namespace Tlab\StateMachine\Validator;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
 use stdClass;
+use Tlab\StateMachine\Exceptions\ValidationException;
 
 class StateMachineValidator
 {
@@ -42,6 +43,9 @@ class StateMachineValidator
         return false;
     }
 
+    /**
+     * @throws ValidationException
+     */
     private function validateTransitions(stdClass $data): bool
     {
         //State list
@@ -52,12 +56,16 @@ class StateMachineValidator
 
         /** @var stdClass $transition */
         foreach ($data->transitions as $transition) {
-            if (!in_array($transition->from, $stateList) || !in_array($transition->to, $stateList)) {
-                return false;
+            if (!in_array($transition->from, $stateList)) {
+                throw new ValidationException("Transition source '{$transition->from}' does not exist in states list");
+            }
+
+            if (!in_array($transition->to, $stateList)) {
+                throw new ValidationException("Transition target '{$transition->to}' does not exist in states list");
             }
 
             if (!in_array($transition->event, $eventList)) {
-                return false;
+                throw new ValidationException("Transition event '{$transition->event}' does not exist in events list");
             }
         }
 

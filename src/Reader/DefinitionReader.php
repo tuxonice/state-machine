@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Reader;
 
-use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Models\Event;
 use Tlab\StateMachine\Models\StateMachine;
 use Tlab\StateMachine\Models\State;
@@ -33,10 +32,8 @@ class DefinitionReader
     public function read(string $jsonDefinition): StateMachine
     {
         $errors = [];
-        if (!$this->validator->validateSchema($jsonDefinition, $errors)) {
-            throw new ValidationException('Invalid definition file: ' . implode("\n", $errors));
-        }
 
+        $this->validator->validateSchema($jsonDefinition, $errors);
         $definitionData = json_decode($jsonDefinition, true);
 
         $flowName = $definitionData['name'];

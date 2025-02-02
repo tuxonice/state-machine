@@ -1,0 +1,130 @@
+{
+  "name": "Real Estate Agency Client Interaction",
+  "states": [
+    {
+      "name": "Start"
+    },
+    {
+      "name": "InitialContact"
+    },
+    {
+      "name": "Qualification"
+    },
+    {
+      "name": "PropertySearch"
+    },
+    {
+      "name": "PropertyViewing"
+    },
+    {
+      "name": "OfferNegotiation"
+    },
+    {
+      "name": "ContractSigning"
+    },
+    {
+      "name": "DealClosed"
+    },
+    {
+      "name": "ClientExit"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "Start",
+      "to": "InitialContact",
+      "event": "ClientInquires",
+      "condition": null
+    },
+    {
+      "from": "InitialContact",
+      "to": "Qualification",
+      "event": "AgentQualifiesClient",
+      "condition": null
+    },
+    {
+      "from": "Qualification",
+      "to": "PropertySearch",
+      "event": "StartPropertySearch",
+      "condition": null
+    },
+    {
+      "from": "PropertySearch",
+      "to": "PropertyViewing",
+      "event": "PropertyFound",
+      "condition": "SearchProperty::class"
+    },
+    {
+    "from": "PropertySearch",
+    "to": "ClientExit",
+    "event": "NoSuitablePropertyFound",
+    "condition": null
+    },
+    {
+      "from": "PropertyViewing",
+      "to": "OfferNegotiation",
+      "event": "ClientInterested",
+      "condition": null
+    },
+    {
+      "from": "PropertyViewing",
+      "to": "ClientExit",
+      "event": "SuccessfulNegotiation",
+      "condition": null
+    },
+    {
+      "from": "OfferNegotiation",
+      "to": "ContractSigning",
+      "event": "SuccessfulNegotiation",
+      "condition": null
+    },
+    {
+      "from": "ContractSigning",
+      "to": "DealClosed",
+      "event": "DealCompleted",
+      "condition": null
+    }
+  ],
+  "events": [
+    {
+      "name": "ClientInquires",
+      "command": null
+    },
+    {
+      "name": "AgentQualifiesClient",
+      "command": null
+    },
+    {
+      "name": "StartPropertySearch",
+      "command": null
+    },
+    {
+      "name": "PropertyFound",
+      "command": null
+    },
+    {
+      "name": "SuccessfulNegotiation",
+      "command": null
+    },
+    {
+      "name": "DealCompleted",
+      "command": null
+    },
+    {
+      "name": "ClientInterested",
+      "command": null
+    },
+    {
+      "name": "NoSuitablePropertyFound",
+      "command": null
+    },
+    {
+      "name": "ClientDeclinesOffer",
+      "command": null
+    },
+    {
+      "name": "ClientWalksAway",
+      "command": null
+    }
+  ]
+}

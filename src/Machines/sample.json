@@ -46,8 +46,7 @@
       "from": "New",
       "to": "Created",
       "event": "Create Order",
-      "condition": "Tlab\\StateMachine\\Conditions\\SampleCondition",
-      "happy": true
+      "condition": "Tlab\\StateMachine\\Conditions\\SampleCondition"
     },
     {
       "from": "Created",

@@ -2,7 +2,9 @@
 
 namespace Tlab\Tests\Flowchart;
 
+use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Flowchart\Designer;
+use Tlab\StateMachine\Exceptions\GraphRenderException;
 use PHPUnit\Framework\TestCase;
 
 class DesignerTest extends TestCase
@@ -27,11 +29,11 @@ class DesignerTest extends TestCase
 <body>
 <h1>State machine name</h1><hr>
     <div class="mermaid" style="margin-top:20px;">graph TB;
-    New("New");
+    New(("New"));
     Created("Created");
     PendingPayment("PendingPayment");
-    CheckPayment("CheckPayment");
-    Cancelled("Cancelled");
+    CheckPayment{"CheckPayment"};
+    Cancelled(("Cancelled"));
     PaymentAuthorized("PaymentAuthorized");
     PaymentFailed("PaymentFailed");
     PreparingShipment("PreparingShipment");
@@ -39,7 +41,7 @@ class DesignerTest extends TestCase
     Invoicing("Invoicing");
     Shipped("Shipped");
     Delivered("Delivered");
-    Completed("Completed");
+    Completed(("Completed"));
 
     New-->|"evt:Create Order
 cond:Tlab\StateMachine\Conditions\SampleCondition
@@ -74,14 +76,15 @@ GRAPHCHART;
     public function testMarkdownCanBeRenderer(): void
     {
         $definitionJson = file_get_contents(dirname(__DIR__, 2) . '/Fixtures/sample.json');
+        self::assertNotFalse($definitionJson);
 
         $expected = <<<'GRAPHCHART'
 graph TB;
-    New("New");
+    New(("New"));
     Created("Created");
     PendingPayment("PendingPayment");
-    CheckPayment("CheckPayment");
-    Cancelled("Cancelled");
+    CheckPayment{"CheckPayment"};
+    Cancelled(("Cancelled"));
     PaymentAuthorized("PaymentAuthorized");
     PaymentFailed("PaymentFailed");
     PreparingShipment("PreparingShipment");
@@ -89,7 +92,7 @@ graph TB;
     Invoicing("Invoicing");
     Shipped("Shipped");
     Delivered("Delivered");
-    Completed("Completed");
+    Completed(("Completed"));
 
     New-->|"evt:Create Order
 cond:Tlab\StateMachine\Conditions\SampleCondition
@@ -110,5 +113,41 @@ GRAPHCHART;
 
         $draw = new Designer();
         self::assertEquals($expected, $draw->renderMarkdown($definitionJson));
+    }
+
+    public function testShouldThrowExceptionOnEmptyJson(): void
+    {
+        $designer = new Designer();
+
+        $this->expectException(GraphRenderException::class);
+        $this->expectExceptionMessage('JSON definition cannot be empty');
+
+        $designer->renderGraph('');
+    }
+
+    public function testShouldThrowExceptionOnInvalidJson(): void
+    {
+        $designer = new Designer();
+
+        $this->expectException(GraphRenderException::class);
+        $this->expectExceptionMessage('Syntax error');
+
+        $designer->renderGraph('{invalid json}');
+    }
+
+    public function testShouldThrowExceptionOnMissingStates(): void
+    {
+        $designer = new Designer();
+        $json = json_encode([
+            'name' => 'Test Machine',
+            'states' => [],
+            'transitions' => [],
+            'events' => [],
+        ]);
+
+        $this->expectException(GraphRenderException::class);
+        $this->expectExceptionMessage('State machine must have at least one state');
+
+        $designer->renderGraph($json);
     }
 }

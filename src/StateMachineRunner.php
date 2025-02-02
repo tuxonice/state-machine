@@ -26,7 +26,7 @@ class StateMachineRunner
      *
      * @return string|null
      */
-    public function run(string $currentState, string $event, array $data): ?string
+    public function run(string $currentState, string $event, array $data = []): ?string
     {
         $transition = $this->getTransition($currentState, $event);
         if ($transition === null || !$transition->checkCondition($data)) {

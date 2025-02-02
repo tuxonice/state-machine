@@ -2,6 +2,7 @@
 
 namespace Tlab\Tests\Validator;
 
+use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Validator\StateMachineValidator;
 use PHPUnit\Framework\TestCase;
 
@@ -33,21 +34,20 @@ class StateMachineValidatorTest extends TestCase
 
     public function testJsonDefinitionMissingState(): void
     {
+        self::expectException(ValidationException::class);
         $jsonDefinition = file_get_contents(dirname(__DIR__, 2) . '/Fixtures/missing-state.json');
         $errors = [];
         $validator = new StateMachineValidator();
-        $isValid = $validator->validateSchema($jsonDefinition, $errors);
-
-        self::assertFalse($isValid);
+        $validator->validateSchema($jsonDefinition, $errors);
     }
 
     public function testJsonDefinitionMissingEvent(): void
     {
+        self::expectException(ValidationException::class);
+        self::expectExceptionMessage("Transition event 'Start Payment Process' does not exist in events list");
         $jsonDefinition = file_get_contents(dirname(__DIR__, 2) . '/Fixtures/missing-event.json');
         $errors = [];
         $validator = new StateMachineValidator();
-        $isValid = $validator->validateSchema($jsonDefinition, $errors);
-
-        self::assertFalse($isValid);
+        $validator->validateSchema($jsonDefinition, $errors);
     }
 }

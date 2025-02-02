@@ -9,6 +9,7 @@
     "states": {
       "type": "array",
       "description": "List of states in the state machine",
+      "minItems": 1,
       "items": {
         "type": "object",
         "properties": {
@@ -24,6 +25,7 @@
     "transitions": {
       "type": "array",
       "description": "List of transitions between states",
+      "minItems": 1,
       "items": {
         "type": "object",
         "properties": {
@@ -51,6 +53,7 @@
     "events": {
       "type": "array",
       "description": "List of events related to state transitions",
+      "minItems": 1,
       "items": {
         "type": "object",
         "properties": {

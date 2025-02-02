@@ -26,7 +26,7 @@ This state machine represents the flow of how a real estate agency interacts wit
 
 **Events/Transitions:**
 
-- Client Inquires: Client contacts the agency for the first time (moves from Idle to Initial Contact).
+- Client Inquires: Client contacts the agency for the first time (moves from Start to Initial Contact).
 - Agent Qualifies Client: Agent gathers information about the client’s needs, preferences, and budget (moves from Initial Contact to Qualification).
 - Start Property Search: Agent starts searching for properties (moves from Qualification to Property Search).
 - Property Found: Agent finds a potential property for the client (moves from Property Search to Property Viewing).
@@ -34,7 +34,7 @@ This state machine represents the flow of how a real estate agency interacts wit
 - Successful Negotiation: An agreement is reached on the terms (moves from Offer/Negotiation to Contract Signing).
 - Deal Completed: The contract is signed, and the deal is closed (moves from Contract Signing to Deal Closed).
 - No Suitable Property Found: No property was found, or the client is no longer interested (moves from Property Search to Client Exit).
-- Client Declines Offer: Client declines the offer after viewing properties (moves from Offer/Negotiation to Client Exit).
+- Client Declines Offer: Client declines the offer after viewing properties (moves from Offer Negotiation to Client Exit).
 - Client Walks Away: Client decides to leave the process at any stage (transitions to Client Exit from any previous state).
 
 #### Explanation:
@@ -63,124 +63,157 @@ At various stages (like Property Search, Viewing, or Negotiation), the client ma
   "name": "Real Estate Agency Client Interaction",
   "states": [
     {
-      "name": "Idle"
+      "name": "Start"
     },
     {
-      "name": "Initial Contact"
+      "name": "InitialContact"
     },
     {
       "name": "Qualification"
     },
     {
-      "name": "Property Search"
+      "name": "PropertySearch"
     },
     {
-      "name": "Property Viewing"
+      "name": "PropertyViewing"
     },
     {
-      "name": "Offer/Negotiation"
+      "name": "OfferNegotiation"
     },
     {
-      "name": "Contract Signing"
+      "name": "ContractSigning"
     },
     {
-      "name": "Deal Closed"
+      "name": "DealClosed"
     },
     {
-      "name": "Client Exit"
+      "name": "ClientExit"
     }
   ],
   "transitions": [
     {
-      "from": "Initial Contact",
-      "to": "New Request",
-      "event": "Client Submits Request",
+      "from": "Start",
+      "to": "InitialContact",
+      "event": "ClientInquires",
+      "condition": null
+    },
+    {
+      "from": "InitialContact",
+      "to": "Qualification",
+      "event": "AgentQualifiesClient",
+      "condition": null
+    },
+    {
+      "from": "Qualification",
+      "to": "PropertySearch",
+      "event": "StartPropertySearch",
+      "condition": null
+    },
+    {
+      "from": "PropertySearch",
+      "to": "PropertyViewing",
+      "event": "PropertyFound",
+      "condition": "SearchProperty::class"
+    },
+    {
+      "from": "PropertySearch",
+      "to": "ClientExit",
+      "event": "NoSuitablePropertyFound",
+      "condition": null
+    },
+    {
+      "from": "PropertyViewing",
+      "to": "OfferNegotiation",
+      "event": "ClientInterested",
+      "condition": null
+    },
+    {
+      "from": "PropertyViewing",
+      "to": "ClientExit",
+      "event": "SuccessfulNegotiation",
+      "condition": null
+    },
+    {
+      "from": "OfferNegotiation",
+      "to": "ContractSigning",
+      "event": "SuccessfulNegotiation",
+      "condition": null
+    },
+    {
+      "from": "ContractSigning",
+      "to": "DealClosed",
+      "event": "DealCompleted",
       "condition": null
     }
   ],
   "events": [
     {
-      "name": "Client Inquires",
+      "name": "ClientInquires",
       "command": null
     },
     {
-      "name": "Agent Qualifies Client",
+      "name": "AgentQualifiesClient",
       "command": null
     },
     {
-      "name": "Start Property Search",
+      "name": "StartPropertySearch",
       "command": null
     },
     {
-      "name": "Property Found",
+      "name": "PropertyFound",
       "command": null
     },
     {
-      "name": "Client Interested in Property",
+      "name": "SuccessfulNegotiation",
       "command": null
     },
     {
-      "name": "Successful Negotiation",
+      "name": "DealCompleted",
       "command": null
     },
     {
-      "name": "Deal Completed",
+      "name": "ClientInterested",
       "command": null
     },
     {
-      "name": "No Suitable Property Found",
+      "name": "NoSuitablePropertyFound",
       "command": null
     },
     {
-      "name": "Client Declines Offer",
+      "name": "ClientDeclinesOffer",
       "command": null
     },
     {
-      "name": "Client Walks Away",
+      "name": "ClientWalksAway",
       "command": null
     }
   ]
 }
-
 ```
 
 ```php
-$definition = file_get_contents('state-machine.json');
-$stateMachineRunner = new StateMachineRunner();
+$jsonDefinition = file_get_contents('state-machine.json');
 
-$data = [
-    'id' => 1,
-    'clientId' => 999,
-    'products' => [
-        [
-            'sku' => 'SKU-1',
-            'price' => 10.00,
-            'qnt' => 1,
-        ]
-    ],
-];
-
-$newState = $stateMachineRunner->run('Created', 'Start Payment Process', $data);
-
+echo ((new Designer())->renderGraph($jsonDefinition));
 ```
 
 
-### Sample
+### Diagram
 
 ```mermaid
-stateDiagram
-    [*] --> Initial_Contact : Client Inquires
-    Initial_Contact --> Qualification : Agent Qualifies Client
-    Qualification --> Property_Search : Start Property Search
-    Property_Search --> Property_Viewing : Property Found
-    Property_Viewing --> Offer_Negotiation : Client Interested
-    Offer_Negotiation --> Contract_Signing : Successful Negotiation
-    Contract_Signing --> Deal_Closed : Deal Completed
-    Deal_Closed --> [*]
-    
-    Property_Search --> Client_Exit : No Suitable Property Found
-    Property_Viewing --> Client_Exit : Client Declines Offer
-    Offer_Negotiation --> Client_Exit : Client Walks Away
-    Client_Exit --> [*]
+graph TD
+    start((Start)) -->|Client Inquires| initial_contact(Initial Contact)
+    initial_contact --> |Agent Qualifies Client| qualification(Qualification)
+    qualification --> |Start Property Search| property_search{Property Search}
+    property_search -->|Property Found| property_viewing{Property Viewing}
+    property_search -->|No Suitable Property Found| client_exit((Client Exit))
+    property_viewing --> |Client Interested| offer_negotiation{Offer Negotiation}
+    property_viewing --> |Client Declines Offer| client_exit((Client Exit))
+    offer_negotiation --> |Successful Negotiation| contract_signing(Contract Signing)
+    offer_negotiation --> |Client Walks Away| client_exit((Client Exit))
+    contract_signing --> |Deal Completed| deal_closed((Deal Closed))
 ```
+
+
+
 
