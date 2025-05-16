@@ -1,6 +1,157 @@
 # state-machine
 An agnostic State Machine PHP Package that provides flexible, framework-independent solution for managing states and transitions
 
+## State machine components
+
+Organizations frequently require highly specialized business processes that must be continuously iterated and improved. Instead of hardcoding each process or extending the default functionality of a commerce platform, a model-driven approach can be applied.
+The order workflow is defined as a state machine, using discrete states and transitions, and serialized into a JSON representation.
+This JSON model is parsed and executed by the system runtime, removing the need to implement process logic manually in code.
+
+A separate state machine can be defined for each distinct process within your application. For instance, the workflow for handling credit card payments may differ significantly from that of invoice-based orders.
+By modeling each process with its own dedicated state machine, you can tailor the behavior to its specific requirements.
+When a new order is submitted, the system can dynamically select the appropriate state machine from the available set to handle the order lifecycle accordingly.
+
+### States
+States help track the progress of sales orders throughout their lifecycle. They represent various stages in your order 
+processing workflow. 
+
+For example:
+
+- In build-to-order scenarios, a "Production Complete" state indicates manufacturing is finished
+- For digital products, a "Customer Download Available" state shows when downloads are ready
+- With physical goods, a "Shipped" state confirms that items have been dispatched to customers
+
+Each state reflects a specific milestone in the order fulfillment process, allowing for better tracking and management.
+
+A list of state elements can be defined with this simple JSON. 
+First, the state has a name that allows referencing the state.
+
+```
+"states": [
+    {
+      "name": "new",
+      "isCurrent": true,
+      "onEnter": true,
+      "timeout": null,
+    },
+    {
+      "name": "paid",
+      "timeout": "24 hours",
+    },
+    {
+      "name": "shipped"
+    },
+    ....
+]
+```
+
+### Transitions
+States are connected through transitions, similar to a directed graph. Each transition is triggered by a specific event 
+that determines when an order can move from one state to another. For example, the "Waiting for Credit Card Capture" 
+state transitions to the "Captured" state when the "Capture Successful" event occurs.
+
+These transitions define both the possible paths a sales order can take and the paths that are not allowed, ensuring 
+that orders follow a logical and controlled progression through their lifecycle.
+
+Transitions are straightforward:
+
+- They connect a source state to a target state
+- An event determines when the transition can occur
+
+This simple structure allows for flexible state management while maintaining clear rules for state progression.
+
+```
+"transitions": [
+    {
+      "source": "Start",
+      "target": "InitialContact",
+      "event": "ClientInquires",
+      "condition": null,
+      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
+      "manual": false
+    },
+    {
+      "source": "InitialContact",
+      "target": "Qualification",
+      "event": "AgentQualifiesClient",
+      "condition": null,
+      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
+      "manual": true
+    },
+    ...
+]
+```
+### Conditions
+
+#### Boolean conditions
+A transition can be conditioned: the state machine can move from one state to another if a certain condition associated 
+with that transition is being satisfied. This can be modeled in the JSON file that describes the process, as in the following example:
+
+```
+{
+  "source": "paid",
+  "target": "shipped",
+  "event": "ship it",
+  "condition": "Tlab\StateMachine\Conditions\PaymentIsCompleted"
+}
+```
+In this case when the transition is triggered, the system will check if the payment is completed. If it is, the transition will be allowed, otherwise it will not be allowed, and the state machine will remain in the current state.
+Conditions can be any class that implements the `ConditionInterface`.
+
+#### if-else conditions
+
+There are cases where a transition can be conditioned based on a boolean condition. For this case we create two transitions, the first one is the transition in case of the boolean condition being satisfied, and the second one is the transition in case of the boolean condition not being satisfied.
+Note that the two transitions must have the same event name. Only the condition of the first transition is checked, and if it is satisfied, the transition is allowed. Otherwise the state machine moves to the target state of the second transition.
+
+```
+{
+  "source": "payment-pending",
+  "target": "paid",
+  "event": "pay",
+  "condition": "Tlab\StateMachine\Conditions\IsOrderPaid"
+},
+{
+  "source": "payment-pending",
+  "target": "cancelled",
+  "event": "pay"
+}
+```
+
+```mermaid
+  flowchart TD
+    payment_pending[Payment Pending]
+    paid[Paid]
+    canceled[Canceled]
+    A((?))
+
+    payment_pending --> | Event: Pay <br> Cond: IsOrderPaid |A
+    A --> |Yes| paid
+    A --> |No|canceled
+```
+
+## Events
+
+Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when the state jumps to the target state of the transition.
+
+```
+"events": [
+    {
+      "name": "ClientInquires"
+    },
+    {
+      "name": "AgentQualifiesClient"
+    },
+    {
+      "name": "StartPropertySearch"
+    },
+    {
+      "name": "PropertyFound"
+    }
+  ]
+```
+
+
+
 ## Installation
 
 - TODO
@@ -92,55 +243,55 @@ At various stages (like Property Search, Viewing, or Negotiation), the client ma
   ],
   "transitions": [
     {
-      "from": "Start",
+      "source": "Start",
       "to": "InitialContact",
       "event": "ClientInquires",
       "condition": null
     },
     {
-      "from": "InitialContact",
+      "source": "InitialContact",
       "to": "Qualification",
       "event": "AgentQualifiesClient",
       "condition": null
     },
     {
-      "from": "Qualification",
+      "source": "Qualification",
       "to": "PropertySearch",
       "event": "StartPropertySearch",
       "condition": null
     },
     {
-      "from": "PropertySearch",
+      "source": "PropertySearch",
       "to": "PropertyViewing",
       "event": "PropertyFound",
       "condition": "SearchProperty::class"
     },
     {
-      "from": "PropertySearch",
+      "source": "PropertySearch",
       "to": "ClientExit",
       "event": "NoSuitablePropertyFound",
       "condition": null
     },
     {
-      "from": "PropertyViewing",
+      "source": "PropertyViewing",
       "to": "OfferNegotiation",
       "event": "ClientInterested",
       "condition": null
     },
     {
-      "from": "PropertyViewing",
+      "source": "PropertyViewing",
       "to": "ClientExit",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "OfferNegotiation",
+      "source": "OfferNegotiation",
       "to": "ContractSigning",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "ContractSigning",
+      "source": "ContractSigning",
       "to": "DealClosed",
       "event": "DealCompleted",
       "condition": null
@@ -202,16 +353,31 @@ echo ((new Designer())->renderGraph($jsonDefinition));
 
 ```mermaid
 graph TD
-    start((Start)) -->|Client Inquires| initial_contact(Initial Contact)
-    initial_contact --> |Agent Qualifies Client| qualification(Qualification)
-    qualification --> |Start Property Search| property_search{Property Search}
-    property_search -->|Property Found| property_viewing{Property Viewing}
-    property_search -->|No Suitable Property Found| client_exit((Client Exit))
-    property_viewing --> |Client Interested| offer_negotiation{Offer Negotiation}
-    property_viewing --> |Client Declines Offer| client_exit((Client Exit))
-    offer_negotiation --> |Successful Negotiation| contract_signing(Contract Signing)
-    offer_negotiation --> |Client Walks Away| client_exit((Client Exit))
-    contract_signing --> |Deal Completed| deal_closed((Deal Closed))
+    A((?))
+    B((?))
+    C((?))
+    initial_contact(Initial Contact)
+    start((Start))
+    qualification(Qualification)
+    property_search(Property Search)
+    offer_negotiation(Offer Negotiation)
+    client_exit((Client Exit))
+    contract_signing(Contract Signing)
+    deal_closed((Deal Closed))
+
+    start ---> |evt: Client Inquires| initial_contact
+    initial_contact ---> |evt: Agent Qualifies Client| qualification
+    qualification ---> |evt: Start Property Search| property_search
+    property_search --> |cond: property found|A
+    A ---> |No| client_exit
+    A ---> |Yes| property_viewing
+    property_viewing ---> |cond: Client Interested|B
+    B --> |Yes| offer_negotiation
+    B --> |No| client_exit
+    offer_negotiation --> |cond: Accept Offer|C
+    C --> |Yes| contract_signing
+    C --> |No| client_exit
+    contract_signing --> |evt: Deal Completed| deal_closed
 ```
 
 

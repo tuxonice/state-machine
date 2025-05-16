@@ -13,14 +13,14 @@
   ],
   "transitions": [
     {
-      "from": "S1",
-      "to": "S2",
+      "source": "S1",
+      "target": "S2",
       "event": "EV1",
       "condition": null
     },
     {
-      "from": "S2",
-      "to": "S3",
+      "source": "S2",
+      "target": "S3",
       "event": "EV2",
       "condition": null
     }
