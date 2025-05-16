@@ -1,6 +1,31 @@
 # state-machine
 An agnostic State Machine PHP Package that provides flexible, framework-independent solution for managing states and transitions
 
+## State machine components
+
+Organizations frequently require highly specialized business processes that must be continuously iterated and improved. Instead of hardcoding each process or extending the default functionality of a commerce platform, a model-driven approach can be applied.
+The order workflow is defined as a state machine, using discrete states and transitions, and serialized into a JSON representation.
+This JSON model is parsed and executed by the system runtime, removing the need to implement process logic manually in code.
+
+A separate state machine can be defined for each distinct process within your application. For instance, the workflow for handling credit card payments may differ significantly from that of invoice-based orders.
+By modeling each process with its own dedicated state machine, you can tailor the behavior to its specific requirements.
+When a new order is submitted, the system can dynamically select the appropriate state machine from the available set to handle the order lifecycle accordingly.
+
+### States
+States help track the progress of sales orders throughout their lifecycle. They represent various stages in your order 
+processing workflow. 
+
+For example:
+
+- In build-to-order scenarios, a "Production Complete" state indicates manufacturing is finished
+- For digital products, a "Customer Download Available" state shows when downloads are ready
+- With physical goods, a "Shipped" state confirms that items have been dispatched to customers
+
+Each state reflects a specific milestone in the order fulfillment process, allowing for better tracking and management.
+
+A list of state elements can be defined with this simple JSON. 
+First, the state has a name that allows referencing the state.
+
 ## Installation
 
 - TODO
