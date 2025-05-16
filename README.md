@@ -26,6 +26,67 @@ Each state reflects a specific milestone in the order fulfillment process, allow
 A list of state elements can be defined with this simple JSON. 
 First, the state has a name that allows referencing the state.
 
+```
+"states": [
+    {
+      "name": "new"
+    },
+    {
+      "name": "paid"
+    },
+    {
+      "name": "shipped"
+    },
+    ....
+]
+```
+
+### Transitions
+States are connected through transitions, similar to a directed graph. Each transition is triggered by a specific event 
+that determines when an order can move from one state to another. For example, the "Waiting for Credit Card Capture" 
+state transitions to the "Captured" state when the "Capture Successful" event occurs.
+
+These transitions define both the possible paths a sales order can take and the paths that are not allowed, ensuring 
+that orders follow a logical and controlled progression through their lifecycle.
+
+Transitions are straightforward:
+
+- They connect a source state to a target state
+- An event determines when the transition can occur
+
+This simple structure allows for flexible state management while maintaining clear rules for state progression.
+
+```
+"transitions": [
+    {
+      "from": "Start",
+      "to": "InitialContact",
+      "event": "ClientInquires",
+      "condition": null
+    },
+    {
+      "from": "InitialContact",
+      "to": "Qualification",
+      "event": "AgentQualifiesClient",
+      "condition": null
+    },
+    ...
+]
+```
+### Conditions
+A transition can be conditioned: the state machine can move from one state to another if a certain condition associated 
+with that transition is being satisfied. This can be modeled in the JSON file that describes the process, as in the following example:
+
+```
+{
+  "from": "paid",
+  "to": "shipped",
+  "event": "ship it",
+  "condition": "Tlab\StateMachine\Conditions\PaymentIsCompleted"
+}
+```
+
+
 ## Installation
 
 - TODO
