@@ -33,9 +33,9 @@ class Event
     {
         $this->name = $eventData['name'];
         $this->command = $eventData['command'];
-        $this->timeout = $eventData['timeout'];
-        $this->onEnter = $eventData['onEnter'];
-        $this->manual = $eventData['command'];
+        $this->timeout = $eventData['timeout'] ?? null;
+        $this->onEnter = $eventData['onEnter'] ?? false;
+        $this->manual = $eventData['manual'] ?? false;
     }
 
     public function getName(): string

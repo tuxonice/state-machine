@@ -43,73 +43,73 @@
   ],
   "transitions": [
     {
-      "from": "New",
+      "source": "New",
       "event": "Create Order",
       "condition": "Tlab\\StateMachine\\Conditions\\SampleCondition"
     },
     {
-      "from": "Created",
-      "to": "PendingPayment",
+      "source": "Created",
+      "target": "PendingPayment",
       "event": "Start Payment Process",
       "condition": null
     },
     {
-      "from": "PendingPayment",
-      "to": "CheckPayment",
+      "source": "PendingPayment",
+      "target": "CheckPayment",
       "event": "Check Payment Status",
       "condition": null
     },
     {
-      "from": "CheckPayment",
-      "to": "PaymentAuthorized",
+      "source": "CheckPayment",
+      "target": "PaymentAuthorized",
       "event": "Payment OK",
       "condition": null
     },
     {
-      "from": "CheckPayment",
-      "to": "PaymentFailed",
+      "source": "CheckPayment",
+      "target": "PaymentFailed",
       "event": "Payment Not OK",
       "condition": null
     },
     {
-      "from": "PaymentFailed",
-      "to": "Cancelled",
+      "source": "PaymentFailed",
+      "target": "Cancelled",
       "event": "Order Cancelled",
       "condition": null
     },
     {
-      "from": "PaymentAuthorized",
-      "to": "PreparingShipment",
+      "source": "PaymentAuthorized",
+      "target": "PreparingShipment",
       "event": "Start Shipment Preparation",
       "condition": null
     },
     {
-      "from": "PreparingShipment",
-      "to": "ShipmentReady",
+      "source": "PreparingShipment",
+      "target": "ShipmentReady",
       "event": "Shipment Prepared",
       "condition": null
     },
     {
-      "from": "ShipmentReady",
-      "to": "Invoicing",
+      "source": "ShipmentReady",
+      "target": "Invoicing",
       "event": "Generate Invoice",
       "condition": null
     },
     {
-      "from": "Invoicing",
-      "to": "Shipped",
+      "source": "Invoicing",
+      "target": "Shipped",
       "event": "Shipment Dispatched",
       "condition": null
     },
     {
-      "from": "Shipped",
-      "to": "Delivered",
+      "source": "Shipped",
+      "target": "Delivered",
       "event": "Shipment Delivered",
       "condition": null
     },
     {
-      "from": "Delivered",
-      "to": "Completed",
+      "source": "Delivered",
+      "target": "Completed",
       "event": "Confirm Delivery and Complete Order",
       "condition": null
     }

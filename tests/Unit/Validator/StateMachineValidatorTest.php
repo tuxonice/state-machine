@@ -28,7 +28,7 @@ class StateMachineValidatorTest extends TestCase
 
         self::assertFalse($isValid);
         self::assertEquals([
-            '/transitions/0' => 'The required properties (to) are missing'
+            '/transitions/0' => 'The required properties (target) are missing'
         ], $errors);
     }
 
