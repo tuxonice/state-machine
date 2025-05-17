@@ -56,12 +56,12 @@ class StateMachineValidator
 
         /** @var stdClass $transition */
         foreach ($data->transitions as $transition) {
-            if (!in_array($transition->from, $stateList)) {
-                throw new ValidationException("Transition source '{$transition->from}' does not exist in states list");
+            if (!in_array($transition->source, $stateList)) {
+                throw new ValidationException("Transition source '{$transition->source}' does not exist in states list");
             }
 
-            if (!in_array($transition->to, $stateList)) {
-                throw new ValidationException("Transition target '{$transition->to}' does not exist in states list");
+            if (!in_array($transition->target, $stateList)) {
+                throw new ValidationException("Transition target '{$transition->target}' does not exist in states list");
             }
 
             if (!in_array($transition->event, $eventList)) {

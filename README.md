@@ -59,14 +59,14 @@ This simple structure allows for flexible state management while maintaining cle
 ```
 "transitions": [
     {
-      "from": "Start",
-      "to": "InitialContact",
+      "source": "Start",
+      "target": "InitialContact",
       "event": "ClientInquires",
       "condition": null
     },
     {
-      "from": "InitialContact",
-      "to": "Qualification",
+      "source": "InitialContact",
+      "target": "Qualification",
       "event": "AgentQualifiesClient",
       "condition": null
     },
@@ -79,8 +79,8 @@ with that transition is being satisfied. This can be modeled in the JSON file th
 
 ```
 {
-  "from": "paid",
-  "to": "shipped",
+  "source": "paid",
+  "target": "shipped",
   "event": "ship it",
   "condition": "Tlab\StateMachine\Conditions\PaymentIsCompleted"
 }
@@ -178,55 +178,55 @@ At various stages (like Property Search, Viewing, or Negotiation), the client ma
   ],
   "transitions": [
     {
-      "from": "Start",
+      "source": "Start",
       "to": "InitialContact",
       "event": "ClientInquires",
       "condition": null
     },
     {
-      "from": "InitialContact",
+      "source": "InitialContact",
       "to": "Qualification",
       "event": "AgentQualifiesClient",
       "condition": null
     },
     {
-      "from": "Qualification",
+      "source": "Qualification",
       "to": "PropertySearch",
       "event": "StartPropertySearch",
       "condition": null
     },
     {
-      "from": "PropertySearch",
+      "source": "PropertySearch",
       "to": "PropertyViewing",
       "event": "PropertyFound",
       "condition": "SearchProperty::class"
     },
     {
-      "from": "PropertySearch",
+      "source": "PropertySearch",
       "to": "ClientExit",
       "event": "NoSuitablePropertyFound",
       "condition": null
     },
     {
-      "from": "PropertyViewing",
+      "source": "PropertyViewing",
       "to": "OfferNegotiation",
       "event": "ClientInterested",
       "condition": null
     },
     {
-      "from": "PropertyViewing",
+      "source": "PropertyViewing",
       "to": "ClientExit",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "OfferNegotiation",
+      "source": "OfferNegotiation",
       "to": "ContractSigning",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "ContractSigning",
+      "source": "ContractSigning",
       "to": "DealClosed",
       "event": "DealCompleted",
       "condition": null

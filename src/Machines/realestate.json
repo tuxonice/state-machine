@@ -31,56 +31,56 @@
   ],
   "transitions": [
     {
-      "from": "Start",
-      "to": "InitialContact",
+      "source": "Start",
+      "target": "InitialContact",
       "event": "ClientInquires",
       "condition": null
     },
     {
-      "from": "InitialContact",
-      "to": "Qualification",
+      "source": "InitialContact",
+      "target": "Qualification",
       "event": "AgentQualifiesClient",
       "condition": null
     },
     {
-      "from": "Qualification",
-      "to": "PropertySearch",
+      "source": "Qualification",
+      "target": "PropertySearch",
       "event": "StartPropertySearch",
       "condition": null
     },
     {
-      "from": "PropertySearch",
-      "to": "PropertyViewing",
+      "source": "PropertySearch",
+      "target": "PropertyViewing",
       "event": "PropertyFound",
       "condition": "SearchProperty::class"
     },
     {
-    "from": "PropertySearch",
-    "to": "ClientExit",
-    "event": "NoSuitablePropertyFound",
-    "condition": null
+      "source": "PropertySearch",
+      "target": "ClientExit",
+      "event": "NoSuitablePropertyFound",
+      "condition": null
     },
     {
-      "from": "PropertyViewing",
-      "to": "OfferNegotiation",
+      "source": "PropertyViewing",
+      "target": "OfferNegotiation",
       "event": "ClientInterested",
       "condition": null
     },
     {
-      "from": "PropertyViewing",
-      "to": "ClientExit",
+      "source": "PropertyViewing",
+      "target": "ClientExit",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "OfferNegotiation",
-      "to": "ContractSigning",
+      "source": "OfferNegotiation",
+      "target": "ContractSigning",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
-      "from": "ContractSigning",
-      "to": "DealClosed",
+      "source": "ContractSigning",
+      "target": "DealClosed",
       "event": "DealCompleted",
       "condition": null
     }

@@ -10,6 +10,12 @@ class Event
 
     private ?string $command;
 
+    private ?string $timeout;
+
+    private bool $manual =  false;
+
+    private bool $onEnter = false;
+
     /**
      * @param array<string,mixed> $eventData
      *
@@ -27,11 +33,29 @@ class Event
     {
         $this->name = $eventData['name'];
         $this->command = $eventData['command'];
+        $this->timeout = $eventData['timeout'];
+        $this->onEnter = $eventData['onEnter'];
+        $this->manual = $eventData['command'];
     }
 
     public function getName(): string
     {
         return $this->name;
+    }
+
+    public function getTimeout(): string
+    {
+        return $this->timeout;
+    }
+
+    public function isOnEnter(): bool
+    {
+        return $this->onEnter;
+    }
+
+    public function isManual(): bool
+    {
+        return $this->manual;
     }
 
     public function getCommand(): ?string

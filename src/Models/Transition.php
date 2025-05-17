@@ -8,9 +8,9 @@ use Tlab\StateMachine\Conditions\ConditionInterface;
 
 class Transition
 {
-    private string $from;
+    private string $source;
 
-    private string $to;
+    private string $target;
 
     private string $event;
 
@@ -32,20 +32,20 @@ class Transition
      */
     private function __construct(array $transitionData)
     {
-        $this->from = $transitionData['from'];
-        $this->to = $transitionData['to'];
+        $this->source = $transitionData['source'];
+        $this->target = $transitionData['target'];
         $this->event = $transitionData['event'];
         $this->condition = $transitionData['condition'];
     }
 
-    public function getFrom(): string
+    public function getSource(): string
     {
-        return $this->from;
+        return $this->source;
     }
 
-    public function getTo(): string
+    public function getTarget(): string
     {
-        return $this->to;
+        return $this->target;
     }
 
     public function getEvent(): string

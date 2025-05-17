@@ -162,8 +162,8 @@ class Designer
         }
 
         foreach ($transitions as $transition) {
-            $nodeFrom = $nodes[$transition->getFrom()];
-            $nodeTo = $nodes[$transition->getTo()];
+            $nodeFrom = $nodes[$transition->getSource()];
+            $nodeTo = $nodes[$transition->getTarget()];
 
             $linkText = 'evt:' . $transition->getEvent();
             if ($transition->getCondition()) {
@@ -190,11 +190,11 @@ class Designer
         $inCount = 0;
         $outCount = 0;
         foreach ($transitions as $transition) {
-            if ($stateName === $transition->getTo()) {
+            if ($stateName === $transition->getTarget()) {
                 $inCount++;
             }
 
-            if ($stateName === $transition->getFrom()) {
+            if ($stateName === $transition->getSource()) {
                 $outCount++;
             }
         }

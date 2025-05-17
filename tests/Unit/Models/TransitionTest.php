@@ -18,8 +18,8 @@ class TransitionTest extends TestCase
             ]
         );
 
-        self::assertEquals('from-event', $transition->getFrom());
-        self::assertEquals('to-event', $transition->getTo());
+        self::assertEquals('from-event', $transition->getSource());
+        self::assertEquals('to-event', $transition->getTarget());
         self::assertEquals('test-event', $transition->getEvent());
     }
 }

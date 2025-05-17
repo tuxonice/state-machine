@@ -16,6 +16,10 @@
           "name": {
             "type": "string",
             "description": "Name of the state"
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "description": "If this is the current state of the state machine"
           }
         },
         "required": ["name"],
@@ -29,11 +33,11 @@
       "items": {
         "type": "object",
         "properties": {
-          "from": {
+          "source": {
             "type": "string",
             "description": "State from which the transition starts"
           },
-          "to": {
+          "target": {
             "type": "string",
             "description": "State to which the transition leads"
           },
@@ -46,7 +50,7 @@
             "description": "Optional condition for the transition"
           }
         },
-        "required": ["from", "to", "event"],
+        "required": ["source", "target"],
         "additionalProperties": false
       }
     },
@@ -64,6 +68,18 @@
           "command": {
             "type": ["string", "null"],
             "description": "Optional command related to the event"
+          },
+          "onEnter": {
+            "type": ["boolean"],
+            "description": "State machine automatically executes it when the current state is the same as the source state of the transition"
+          },
+          "timeout": {
+            "type": ["string"],
+            "description": "Events can be triggered after a defined period of time has passed through a timeout"
+          },
+          "manual": {
+            "type": ["boolean"],
+            "description": "The transition should be trigger manually"
           }
         },
         "required": ["name"],

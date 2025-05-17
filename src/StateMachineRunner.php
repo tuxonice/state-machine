@@ -35,14 +35,14 @@ class StateMachineRunner
 
         $this->runEventCommand($event, $data);
 
-        return $transition->getTo();
+        return $transition->getTarget();
     }
 
 
     private function getTransition(string $currentState, string $event): ?Transition
     {
         foreach ($this->stateMachine->getTransitions() as $transition) {
-            if ($transition->getFrom() === $currentState && $transition->getEvent() === $event) {
+            if ($transition->getSource() === $currentState && $transition->getEvent() === $event) {
                 return $transition;
             }
         }
