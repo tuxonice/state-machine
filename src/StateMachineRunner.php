@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tlab\StateMachine;
 
 use Tlab\StateMachine\Commands\CommandInterface;
+use Tlab\StateMachine\Flowchart\Designer;
 use Tlab\StateMachine\Models\StateMachine;
 use Tlab\StateMachine\Reader\DefinitionReader;
 use Tlab\StateMachine\Models\Transition;
@@ -36,6 +37,34 @@ class StateMachineRunner
         $this->runEventCommand($event, $data);
 
         return $transition->getTarget();
+    }
+
+    public function getStateMachine(): StateMachine
+    {
+        return $this->stateMachine;
+    }
+
+    /**
+     * Generates a Mermaid HTML diagram of the state machine
+     *
+     * @return string HTML representation of the state machine diagram
+     */
+    public function generateHtmlDiagram(): string
+    {
+        $designer = new Designer();
+
+        return $designer->renderGraph($this->stateMachine->toJson());
+    }
+
+    /**
+     * Generates a Mermaid Markdown diagram of the state machine
+     *
+     * @return string Markdown representation of the state machine diagram
+     */
+    public function generateMarkdownDiagram(): string
+    {
+        $designer = new Designer();
+        return $designer->renderMarkdown($this->stateMachine->toJson());
     }
 
 

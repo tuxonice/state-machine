@@ -79,4 +79,56 @@ class StateMachine
     {
         return $this->name;
     }
+
+    public function getCurrentState(): ?string
+    {
+        foreach ($this->getStates() as $state) {
+            if($state->isCurrent()) {
+                return $state->getName();
+            }
+        }
+
+        return null;
+    }
+
+    public function toJson(): string
+    {
+        $result = [
+            'name' => $this->getName(),
+            'states' => [],
+            'transitions' => [],
+            'events' => []
+        ];
+
+        // Process states
+        foreach ($this->getStates() as $state) {
+            $result['states'][] = [
+                'name' => $state->getName(),
+                'isCurrent' => $state->isCurrent()
+            ];
+        }
+
+        // Process transitions
+        foreach ($this->getTransitions() as $transition) {
+            $result['transitions'][] = [
+                'source' => $transition->getSource(),
+                'target' => $transition->getTarget(),
+                'event' => $transition->getEvent(),
+                'condition' => $transition->getCondition()
+            ];
+        }
+
+        // Process events
+        foreach ($this->getEvents() as $event) {
+            $result['events'][] = [
+                'name' => $event->getName(),
+                'command' => $event->getCommand(),
+                'timeout' => $event->getTimeout() ?? null,
+                'manual' => $event->isManual(),
+                'onEnter' => $event->isOnEnter()
+            ];
+        }
+
+        return json_encode($result, JSON_PRETTY_PRINT);
+    }
 }

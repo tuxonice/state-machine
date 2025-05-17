@@ -43,7 +43,7 @@ class Event
         return $this->name;
     }
 
-    public function getTimeout(): string
+    public function getTimeout(): ?string
     {
         return $this->timeout;
     }
