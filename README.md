@@ -288,16 +288,31 @@ echo ((new Designer())->renderGraph($jsonDefinition));
 
 ```mermaid
 graph TD
-    start((Start)) -->|Client Inquires| initial_contact(Initial Contact)
-    initial_contact --> |Agent Qualifies Client| qualification(Qualification)
-    qualification --> |Start Property Search| property_search{Property Search}
-    property_search -->|Property Found| property_viewing{Property Viewing}
-    property_search -->|No Suitable Property Found| client_exit((Client Exit))
-    property_viewing --> |Client Interested| offer_negotiation{Offer Negotiation}
-    property_viewing --> |Client Declines Offer| client_exit((Client Exit))
-    offer_negotiation --> |Successful Negotiation| contract_signing(Contract Signing)
-    offer_negotiation --> |Client Walks Away| client_exit((Client Exit))
-    contract_signing --> |Deal Completed| deal_closed((Deal Closed))
+    A((?))
+    B((?))
+    C((?))
+    initial_contact(Initial Contact)
+    start((Start))
+    qualification(Qualification)
+    property_search(Property Search)
+    offer_negotiation(Offer Negotiation)
+    client_exit((Client Exit))
+    contract_signing(Contract Signing)
+    deal_closed((Deal Closed))
+
+    start ---> |evt: Client Inquires| initial_contact
+    initial_contact ---> |evt: Agent Qualifies Client| qualification
+    qualification ---> |evt: Start Property Search| property_search
+    property_search --> |cond: property found|A
+    A ---> |No| client_exit
+    A ---> |Yes| property_viewing
+    property_viewing ---> |cond: Client Interested|B
+    B --> |Yes| offer_negotiation
+    B --> |No| client_exit
+    offer_negotiation --> |cond: Accept Offer|C
+    C --> |Yes| contract_signing
+    C --> |No| client_exit
+    contract_signing --> |evt: Deal Completed| deal_closed
 ```
 
 

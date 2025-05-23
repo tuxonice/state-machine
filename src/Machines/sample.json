@@ -118,51 +118,87 @@
   "events": [
     {
       "name": "Create Order",
-      "command": "Tlab\\StateMachine\\Commands\\SampleCommand"
+      "command": "Tlab\\StateMachine\\Commands\\SampleCommand",
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Start Payment Process",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Check Payment Status",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Payment OK",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Payment Not OK",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Order Cancelled",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Start Shipment Preparation",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Shipment Prepared",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Generate Invoice",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Shipment Dispatched",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Shipment Delivered",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     },
     {
       "name": "Complete Order",
-      "command": null
+      "command": null,
+      "onEnter": false,
+      "timeout": null,
+      "manual": false
     }
   ]
 }

@@ -9,6 +9,6 @@ require __DIR__ . '/../vendor/autoload.php';
 $jsonDefinition = file_get_contents(dirname(__DIR__).'/src/Machines/realestate.json');
 
 $stateMachineRunner = new StateMachineRunner($jsonDefinition);
-dd($stateMachineRunner->getStateMachine());
-echo($stateMachineRunner->generateMarkdownDiagram());
+//dd($stateMachineRunner->getStateMachine());
+echo($stateMachineRunner->generateHtmlDiagram());
 
