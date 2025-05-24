@@ -74,6 +74,8 @@ This simple structure allows for flexible state management while maintaining cle
 ]
 ```
 ### Conditions
+
+#### Boolean conditions
 A transition can be conditioned: the state machine can move from one state to another if a certain condition associated 
 with that transition is being satisfied. This can be modeled in the JSON file that describes the process, as in the following example:
 
@@ -85,6 +87,71 @@ with that transition is being satisfied. This can be modeled in the JSON file th
   "condition": "Tlab\StateMachine\Conditions\PaymentIsCompleted"
 }
 ```
+In this case when the transition is triggered, the system will check if the payment is completed. If it is, the transition will be allowed, otherwise it will not be allowed, and the state machine will remain in the current state.
+Conditions can be any class that implements the `ConditionInterface`.
+
+#### if-else conditions
+
+There are cases where a transition can be conditioned based on a boolean condition. For this case we create two transitions, the first one is the transition in case of the boolean condition being satisfied, and the second one is the transition in case of the boolean condition not being satisfied.
+Note that the two transitions must have the same event name. Only the condition of the first transition is checked, and if it is satisfied, the transition is allowed. Otherwise the state machine moves to the target state of the second transition.
+
+```
+{
+  "source": "payment-pending",
+  "target": "paid",
+  "event": "pay",
+  "condition": "Tlab\StateMachine\Conditions\IsOrderPaid"
+},
+{
+  "source": "payment-pending",
+  "target": "cancelled",
+  "event": "pay"
+}
+```
+
+```mermaid
+  flowchart TD
+    payment_pending[Payment Pending]
+    paid[Paid]
+    canceled[Canceled]
+    A((?))
+
+    payment_pending --> | Event: Pay <br> Cond: IsOrderPaid |A
+    A --> |Yes| paid
+    A --> |No|canceled
+```
+
+## Events
+
+Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when the state jumps to the target state of the transition.
+
+```json
+"events": [
+    {
+      "name": "ClientInquires",
+      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
+      "onEnter": false,
+      "timeout": false,
+      "manual": false
+    },
+    {
+      "name": "AgentQualifiesClient",
+      "command": null,
+      "onEnter": false,
+      "timeout": false,
+      "manual": false
+    },
+    {
+      "name": "StartPropertySearch",
+      "command": null
+    },
+    {
+      "name": "PropertyFound",
+      "command": null
+    }
+  ]
+```
+
 
 
 ## Installation
