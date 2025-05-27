@@ -125,7 +125,7 @@ Note that the two transitions must have the same event name. Only the condition 
 
 Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when the state jumps to the target state of the transition.
 
-```json
+```
 "events": [
     {
       "name": "ClientInquires",
