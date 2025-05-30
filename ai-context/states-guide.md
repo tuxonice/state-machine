@@ -16,7 +16,12 @@ The starting point of the state machine.
 **Example Configuration:**
 ```json
 {
-  "name": "new"
+"states": [
+  {
+    "name": "new",
+    "isCurrent": true
+  }
+]
 }
 ```
 
@@ -30,7 +35,11 @@ Temporary states that represent work in progress.
 **Example Configuration:**
 ```json
 {
-  "name": "in_review"
+  "states": [
+    {
+      "name": "in_review"
+    }
+  ]
 }
 ```
 
@@ -45,7 +54,11 @@ End states with no outgoing transitions.
 **Example Configuration:**
 ```json
 {
-  "name": "completed"
+  "states": [
+    {
+      "name": "completed"
+    }
+  ]
 }
 ```
 
@@ -69,5 +82,63 @@ End states with no outgoing transitions.
 
 ### Error Handling
 - Define clear error states
-- Implement timeouts for states that might get stuck
 - Provide clear error messages for invalid state transitions
+
+### Example State Machine
+
+#### State Machine Definition (JSON)
+```json
+{
+  "name": "Example State machine",
+  "states": [
+    {
+      "name": "State A",
+      "isCurrent": false
+    },
+    {
+      "name": "State B",
+      "isCurrent": true
+    },
+    {
+      "name": "State C",
+      "isCurrent": false
+    },
+  ],
+  "transitions": [
+    {
+      "source": "State A",
+      "target": "State B",
+      "event": "Event 1",
+      "condition": null
+    },
+    {
+      "source": "State B",
+      "target": "State C",
+      "event": "Event 2",
+      "condition": null
+    }
+  ],
+  "events": [
+    {
+      "name": "Event 1",
+      "command": null
+    },
+    {
+      "name": "Event 2",
+      "command": null
+    }
+  ]
+}
+```
+
+#### Example State Diagram (Mermaid)
+
+```mermaid
+flowchart LR
+    classDef active fill:#080
+    A[State A]
+    B[State B]
+    C[State C]
+    A -->|Event 1| B
+    B:::active -->|Event 2| C
+```

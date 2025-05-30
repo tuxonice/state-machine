@@ -2,13 +2,16 @@
   "name": "State machine name",
   "states": [
     {
-      "name": "New"
+      "name": "New",
+      "isCurrent": false
     },
     {
-      "name": "Created"
+      "name": "Created",
+      "isCurrent": false
     },
     {
-      "name": "PendingPayment"
+      "name": "PendingPayment",
+      "isCurrent": true
     },
     {
       "name": "CheckPayment"

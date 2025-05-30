@@ -11,12 +11,14 @@ States represent the various stages that an entity (like an order, document, or 
 - **Initial State**: The starting point of the state machine
 - **Human-Readable**: State names should clearly describe the entity's condition
 
+Each state can have a `name` and an optional `isCurrent` to mark it as the current state.
+
 ### Example
 ```json
 {
   "states": [
-    { "name": "new" },
-    { "name": "paid" },
+    { "name": "new", "isCurrent": true },
+    { "name": "paid", "isCurrent": false },
     { "name": "shipped" },
     { "name": "delivered" },
     { "name": "cancelled" }
