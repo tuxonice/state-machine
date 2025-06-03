@@ -29,10 +29,14 @@ First, the state has a name that allows referencing the state.
 ```
 "states": [
     {
-      "name": "new"
+      "name": "new",
+      "isCurrent": true,
+      "onEnter": true,
+      "timeout": null,
     },
     {
-      "name": "paid"
+      "name": "paid",
+      "timeout": "24 hours",
     },
     {
       "name": "shipped"
@@ -62,13 +66,17 @@ This simple structure allows for flexible state management while maintaining cle
       "source": "Start",
       "target": "InitialContact",
       "event": "ClientInquires",
-      "condition": null
+      "condition": null,
+      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
+      "manual": false
     },
     {
       "source": "InitialContact",
       "target": "Qualification",
       "event": "AgentQualifiesClient",
-      "condition": null
+      "condition": null,
+      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
+      "manual": true
     },
     ...
 ]
@@ -128,26 +136,16 @@ Events are the triggers that cause state transitions. Each event has a name and 
 ```
 "events": [
     {
-      "name": "ClientInquires",
-      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
-      "onEnter": false,
-      "timeout": false,
-      "manual": false
+      "name": "ClientInquires"
     },
     {
-      "name": "AgentQualifiesClient",
-      "command": null,
-      "onEnter": false,
-      "timeout": false,
-      "manual": false
+      "name": "AgentQualifiesClient"
     },
     {
-      "name": "StartPropertySearch",
-      "command": null
+      "name": "StartPropertySearch"
     },
     {
-      "name": "PropertyFound",
-      "command": null
+      "name": "PropertyFound"
     }
   ]
 ```

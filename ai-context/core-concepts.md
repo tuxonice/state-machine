@@ -3,25 +3,50 @@
 ## 1. States
 
 ### Definition
-States represent the various stages that an entity (like an order, document, or process) can be in during its lifecycle.
+
+States represent the various stages that an entity (like an order, client, document, or process) can be in during its
+lifecycle.
 
 ### Key Characteristics
+
 - **Unique Identification**: Each state has a unique name (e.g., `new`, `paid`, `shipped`)
 - **Terminal States**: Some states may be endpoints with no outgoing transitions
 - **Initial State**: The starting point of the state machine
 - **Human-Readable**: State names should clearly describe the entity's condition
 
-Each state can have a `name` and an optional `isCurrent` to mark it as the current state.
+### Properties of a State
+
+| Property Name | Type          | Description                                                                                                               | Required | Default value |
+|---------------|---------------|---------------------------------------------------------------------------------------------------------------------------|----------|---------------|
+| name          | string        | a unique state name                                                                                                       | yes      |               |
+| isCurrent     | boolean       | mark it as the current state. If no state is marked as current, <br/> the first state in the list of states will be used. | no       | false         |
+| onEnter       | boolean       | to trigger the movement to the next state automatically when entering the state.                                          | no       | false         |
+| timeout       | string / null | to trigger the movement to the next state after a specified duration.                                                     | no       | null          |
 
 ### Example
+
 ```json
 {
   "states": [
-    { "name": "new", "isCurrent": true },
-    { "name": "paid", "isCurrent": false },
-    { "name": "shipped" },
-    { "name": "delivered" },
-    { "name": "cancelled" }
+    {
+      "name": "new",
+      "isCurrent": true,
+      "onEnter": true,
+      "timeout": "24 hours"
+    },
+    {
+      "name": "paid",
+      "isCurrent": false
+    },
+    {
+      "name": "shipped"
+    },
+    {
+      "name": "delivered"
+    },
+    {
+      "name": "cancelled"
+    }
   ]
 }
 ```
@@ -29,15 +54,29 @@ Each state can have a `name` and an optional `isCurrent` to mark it as the curre
 ## 2. Transitions
 
 ### Definition
+
 Transitions define the possible movements between states and the rules that govern these movements.
 
 ### Key Components
+
 - **Source State**: The starting state of the transition
 - **Target State**: The destination state
 - **Event**: What triggers the transition
 - **Condition**: Optional guard clause that must be true for the transition to occur
+- **Command**: Optional command that executes after the transition
+
+## Properties of a Transition
+
+| Property Name | Type          | Description                                     | Required | Default value |
+|---------------|---------------|-------------------------------------------------|----------|---------------|
+| source        | string        | Source state for the transition                 | yes      |               |
+| target        | string        | Target state for the transition                 | yes      |               |
+| event         | string        | The event name that will trigger the transition | no       |               |
+| condition     | string / null | Class name implementing the condition           | no       | null          |
+| command       | string / null | Class name implementing the command             | no       | null          |
 
 ### Example
+
 ```json
 {
   "transitions": [
@@ -45,12 +84,14 @@ Transitions define the possible movements between states and the rules that gove
       "source": "new",
       "target": "paid",
       "event": "process_payment",
-      "condition": "App\\Conditions\\PaymentIsValid"
+      "condition": "App\\Conditions\\PaymentIsValid",
+      "command": "App\\Commands\\ProcessPaymentCommand"
     },
     {
       "source": "paid",
       "target": "shipped",
-      "event": "ship_order"
+      "event": "ship_order",
+      "command": null
     }
   ]
 }
@@ -59,39 +100,30 @@ Transitions define the possible movements between states and the rules that gove
 ## 3. Events
 
 ### Definition
-Events are the triggers that initiate state transitions. They represent something that happens in the system that might cause a state change.
+
+Events are the triggers that initiate state transitions. They represent something that happens in the system that might
+cause a state change.
 
 ### Key Characteristics
+
 - **Named Actions**: Each event has a unique identifier
-- **Optional Commands**: Can be associated with business logic that executes during the transition
-- **Event Types**:
-  - **OnEnter Events**: Set `onEnter: true` to trigger automatically when entering a state
-  - **Timeout Events**: Include a `timeout` field to trigger after a specified duration
-  - **Manual Events**: Set `manual: true` for events that require explicit triggering (default behavior)
 
 ### Example
+
 ```json
 {
   "events": [
     {
-      "name": "process_payment",
-      "command": "App\\Commands\\ProcessPaymentCommand",
-      "manual": true
+      "name": "process_payment"
     },
     {
-      "name": "ship_order",
-      "command": "App\\Commands\\ShipOrderCommand",
-      "manual": true
+      "name": "ship_order"
     },
     {
-      "name": "payment_timeout",
-      "command": "App\\Commands\\HandlePaymentTimeoutCommand",
-      "timeout": "24 hours"
+      "name": "payment_timeout"
     },
     {
-      "name": "welcome_email",
-      "command": "App\\Commands\\SendWelcomeEmailCommand",
-      "onEnter": true
+      "name": "welcome_email"
     }
   ]
 }
@@ -108,16 +140,19 @@ Events are the triggers that initiate state transitions. They represent somethin
 ## Best Practices
 
 ### States
+
 - Keep state names simple and descriptive
 - Avoid too many states (consider sub-states if needed)
 - Document what each state means in your business context
 
 ### Transitions
+
 - Ensure all possible state changes are explicitly defined
 - Use conditions to enforce business rules
 - Keep transition logic simple; move complex logic to commands
 
 ### Events
+
 - Use clear, action-oriented names (e.g., `order_placed` not `new_order`)
 - Keep event handlers small and focused
 - Consider idempotency for events that might be retried
@@ -128,11 +163,21 @@ Events are the triggers that initiate state transitions. They represent somethin
 {
   "name": "Order Processing",
   "states": [
-    { "name": "new" },
-    { "name": "paid" },
-    { "name": "shipped" },
-    { "name": "delivered" },
-    { "name": "cancelled" }
+    {
+      "name": "new"
+    },
+    {
+      "name": "paid"
+    },
+    {
+      "name": "shipped"
+    },
+    {
+      "name": "delivered"
+    },
+    {
+      "name": "cancelled"
+    }
   ],
   "transitions": [
     {
@@ -152,7 +197,10 @@ Events are the triggers that initiate state transitions. They represent somethin
       "event": "confirm_delivery"
     },
     {
-      "source": ["new", "paid"],
+      "source": [
+        "new",
+        "paid"
+      ],
       "target": "cancelled",
       "event": "cancel_order"
     }
