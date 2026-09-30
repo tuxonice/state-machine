@@ -2,6 +2,7 @@
 
 namespace Tlab\Tests\Reader;
 
+use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Reader\DefinitionReader;
 use PHPUnit\Framework\TestCase;
 use Tlab\StateMachine\Models\Event;
@@ -20,7 +21,7 @@ class DefinitionReaderTest extends TestCase
         self::assertEquals([
             new State('New'),
             new State('Created'),
-            new State('PendingPayment'),
+            (new State('PendingPayment'))->setIsCurrent(true),
             new State('CheckPayment'),
             new State('Cancelled'),
             new State('PaymentAuthorized'),
@@ -156,5 +157,70 @@ class DefinitionReaderTest extends TestCase
                 'command' => null
             ])
         ], $machine->getEvents());
+    }
+
+    public function testInvalidDefinitionThrowsWithSchemaErrors(): void
+    {
+        $definitionJson = file_get_contents(dirname(__DIR__, 2) . '/Fixtures/invalid-sample.json');
+
+        try {
+            (new DefinitionReader())->read($definitionJson);
+            self::fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            self::assertSame(
+                ['/transitions/0' => 'The required properties (target) are missing'],
+                $e->getErrors()
+            );
+        }
+    }
+
+    public function testMalformedJsonThrows(): void
+    {
+        $this->expectException(ValidationException::class);
+        (new DefinitionReader())->read('{not json');
+    }
+
+    public function testOptionalFieldsDefaultWhenOmitted(): void
+    {
+        $machine = (new DefinitionReader())->read($this->fixture('minimal.json'));
+
+        self::assertNull($machine->getEvents()[0]->getCommand());
+        self::assertNull($machine->getTransitions()[0]->getCondition());
+    }
+
+    public function testIsCurrentIsRead(): void
+    {
+        $machine = (new DefinitionReader())->read($this->fixture('minimal.json'));
+
+        self::assertSame('A', $machine->getCurrentState());
+    }
+
+    public function testTransitionWithoutEventIsRejectedBySchema(): void
+    {
+        $this->expectException(ValidationException::class);
+        (new DefinitionReader())->read($this->fixture('transition-without-event.json'));
+    }
+
+    public function testReadingTwiceDoesNotAccumulateState(): void
+    {
+        $reader = new DefinitionReader();
+        $reader->read($this->fixture('minimal.json'));
+        $machine = $reader->read($this->fixture('minimal.json'));
+
+        self::assertCount(2, $machine->getStates());
+        self::assertCount(1, $machine->getTransitions());
+    }
+
+    public function testToJsonRoundTrips(): void
+    {
+        $reader = new DefinitionReader();
+        $machine = $reader->read($this->fixture('minimal.json'));
+
+        self::assertEquals($machine, $reader->read($machine->toJson()));
+    }
+
+    private function fixture(string $name): string
+    {
+        return file_get_contents(dirname(__DIR__, 2) . '/Fixtures/' . $name);
     }
 }

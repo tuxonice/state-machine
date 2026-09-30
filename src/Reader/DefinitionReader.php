@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Reader;
 
+use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Models\Event;
 use Tlab\StateMachine\Models\StateMachine;
 use Tlab\StateMachine\Models\State;
@@ -12,13 +13,10 @@ use Tlab\StateMachine\Validator\StateMachineValidator;
 
 class DefinitionReader
 {
-    private StateMachine $stateMachine;
-
     private StateMachineValidator $validator;
 
     public function __construct()
     {
-        $this->stateMachine = new StateMachine();
         $this->validator = new StateMachineValidator();
     }
 
@@ -33,16 +31,25 @@ class DefinitionReader
     {
         $errors = [];
 
-        $this->validator->validateSchema($jsonDefinition, $errors);
+        if (!$this->validator->validateSchema($jsonDefinition, $errors)) {
+            $details = implode('; ', array_map(
+                fn($pointer, $message) => "{$pointer}: {$message}",
+                array_keys($errors),
+                $errors
+            ));
+
+            throw new ValidationException("Invalid state machine definition - {$details}", $errors);
+        }
+
         $definitionData = json_decode($jsonDefinition, true);
 
-        $flowName = $definitionData['name'];
-        $this->stateMachine->setName($flowName);
-        $this->setStates($this->stateMachine, $definitionData);
-        $this->setTransitions($this->stateMachine, $definitionData);
-        $this->setEvents($this->stateMachine, $definitionData);
+        $stateMachine = new StateMachine();
+        $stateMachine->setName($definitionData['name']);
+        $this->setStates($stateMachine, $definitionData);
+        $this->setTransitions($stateMachine, $definitionData);
+        $this->setEvents($stateMachine, $definitionData);
 
-        return $this->stateMachine;
+        return $stateMachine;
     }
 
     /**
@@ -54,7 +61,9 @@ class DefinitionReader
     private function setStates(StateMachine $stateMachine, array $definitionData): void
     {
         foreach ($definitionData['states'] as $stateData) {
-            $stateMachine->addState(new State($stateData['name']));
+            $stateMachine->addState(
+                (new State($stateData['name']))->setIsCurrent($stateData['isCurrent'] ?? false)
+            );
         }
     }
 

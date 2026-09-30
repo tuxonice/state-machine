@@ -32,7 +32,7 @@ class Event
     private function __construct(array $eventData)
     {
         $this->name = $eventData['name'];
-        $this->command = $eventData['command'];
+        $this->command = $eventData['command'] ?? null;
         $this->timeout = $eventData['timeout'] ?? null;
         $this->onEnter = $eventData['onEnter'] ?? false;
         $this->manual = $eventData['manual'] ?? false;

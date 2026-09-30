@@ -1,0 +1,13 @@
+{
+  "name": "Minimal",
+  "states": [
+    { "name": "A", "isCurrent": true },
+    { "name": "B" }
+  ],
+  "transitions": [
+    { "source": "A", "target": "B", "event": "go" }
+  ],
+  "events": [
+    { "name": "go" }
+  ]
+}

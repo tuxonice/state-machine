@@ -50,7 +50,7 @@
             "description": "Optional condition for the transition"
           }
         },
-        "required": ["source", "target"],
+        "required": ["source", "target", "event"],
         "additionalProperties": false
       }
     },
@@ -74,7 +74,7 @@
             "description": "State machine automatically executes it when the current state is the same as the source state of the transition"
           },
           "timeout": {
-            "type": ["string"],
+            "type": ["string", "null"],
             "description": "Events can be triggered after a defined period of time has passed through a timeout"
           },
           "manual": {

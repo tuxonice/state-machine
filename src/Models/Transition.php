@@ -35,7 +35,7 @@ class Transition
         $this->source = $transitionData['source'];
         $this->target = $transitionData['target'];
         $this->event = $transitionData['event'];
-        $this->condition = $transitionData['condition'];
+        $this->condition = $transitionData['condition'] ?? null;
     }
 
     public function getSource(): string

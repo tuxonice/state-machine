@@ -21,7 +21,13 @@ class StateMachineValidator
     {
         $schema = file_get_contents(__DIR__ . '/Schema/schema.json');
 
-        $data = json_decode($jsonDefinition);
+        try {
+            $data = json_decode($jsonDefinition, false, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $errors = ['' => 'Invalid JSON: ' . $e->getMessage()];
+
+            return false;
+        }
 
         $validator = new Validator();
         $validator->setMaxErrors(5);
