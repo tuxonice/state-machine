@@ -11,15 +11,15 @@ class TransitionTest extends TestCase
     {
         $transition = Transition::createFromArray(
             [
-                'from' => 'from-event',
-                'to' => 'to-event',
+                'source' => 'source-state',
+                'target' => 'target-state',
                 'event' => 'test-event',
                 'condition' => '\\sample\\condition',
             ]
         );
 
-        self::assertEquals('from-event', $transition->getFrom());
-        self::assertEquals('to-event', $transition->getTo());
+        self::assertEquals('source-state', $transition->getSource());
+        self::assertEquals('target-state', $transition->getTarget());
         self::assertEquals('test-event', $transition->getEvent());
     }
 }
