@@ -20,7 +20,7 @@ main
 | Phase | Branch | Status |
 |-------|--------|--------|
 | 1. Make what exists correct | `sm-8-phase-1-core-correctness` | Done |
-| 2. Framework-agnostic core | `sm-8-phase-2-framework-agnostic-core` | Not started |
+| 2. Framework-agnostic core | `sm-8-phase-2-framework-agnostic-core` | Done |
 | 3. Advanced workflow features | `sm-8-phase-3-advanced-features` | Not started |
 | 4. Adoption | `sm-8-phase-4-adoption` | Not started |
 
@@ -74,11 +74,18 @@ Not done here: the class-exists and interface check for conditions and commands.
 
 Branch: `sm-8-phase-2-framework-agnostic-core`
 
-- [ ] `ConditionResolver` and `CommandResolver` built on PSR-11 `ContainerInterface`, defaulting to `new`. Validate that the class exists and implements the interface (finding 7).
-- [ ] PSR-14 event dispatcher with `BeforeTransition`, `AfterTransition` and `TransitionBlocked` events, and a null dispatcher by default.
-- [ ] Split loading from running: a `DefinitionLoader` (JSON string, file, array) and an immutable `StateMachine` definition, separate from the runner.
-- [ ] `StatefulInterface` and `StateStorageInterface` (get and set state, with an in-memory implementation), plus a `can()`, `apply()` and `availableEvents()` API.
-- [ ] `StateMachineException` as the base of all package exceptions.
+- [x] `ConditionResolver` and `CommandResolver` built on PSR-11 `ContainerInterface`, defaulting to `new`. The class must exist and implement the interface, otherwise `ResolutionException` is thrown (finding 7).
+- [x] PSR-14 event dispatcher with `BeforeTransition`, `AfterTransition` and `TransitionBlocked` events, and a `NullEventDispatcher` by default.
+- [x] Loading split from running. `DefinitionReader` reads JSON, arrays and files (`read()`, `readArray()`, `readFile()`), the `StateMachine` definition is immutable, and `StateMachineRunner` takes a definition (`fromJson()` is the shortcut).
+- [x] `StatefulInterface` and `StateStorageInterface` (`StatefulStateStorage` by default, `InMemoryStateStorage`), plus `can()`, `apply()`, `applyTo()`, `canApplyTo()`, `availableEvents()` and `availableEventsFor()`.
+- [x] `StateMachineException` as the base of all package exceptions.
+
+Decisions and differences from the plan:
+- There is no separate `DefinitionLoader` class: adding `readArray()` and `readFile()` to `DefinitionReader` avoided two classes doing the same job.
+- `StateStorageInterface` reads and writes the state of a *subject object* (`read(object)`, `write(object, string)`), so it can back any object. `StatefulInterface` is the zero-config path, where the subject keeps its own state.
+- `availableEvents()` ignores conditions, because they need data. Use `can()` to evaluate them.
+- Breaking changes, acceptable before the first release: `new StateMachineRunner($json)` is now `StateMachineRunner::fromJson($json)`, `StateMachine` and `State` have no setters, `Transition::checkCondition()` is gone (the runner evaluates conditions through the resolver), and `GraphRenderException` no longer extends `RuntimeException`.
+- `psr/container` and `psr/event-dispatcher` are new requirements.
 
 ## Phase 3: Advanced workflow features
 

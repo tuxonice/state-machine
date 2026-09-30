@@ -21,7 +21,7 @@ class DefinitionReaderTest extends TestCase
         self::assertEquals([
             new State('New'),
             new State('Created'),
-            (new State('PendingPayment'))->setIsCurrent(true),
+            new State('PendingPayment', true),
             new State('CheckPayment'),
             new State('Cancelled'),
             new State('PaymentAuthorized'),
@@ -222,5 +222,35 @@ class DefinitionReaderTest extends TestCase
     private function fixture(string $name): string
     {
         return file_get_contents(dirname(__DIR__, 2) . '/Fixtures/' . $name);
+    }
+
+    public function testReadArray(): void
+    {
+        $machine = (new DefinitionReader())->readArray(
+            json_decode($this->fixture('minimal.json'), true)
+        );
+
+        self::assertSame('Minimal', $machine->getName());
+        self::assertSame('A', $machine->getCurrentState());
+    }
+
+    public function testReadArrayValidatesLikeJson(): void
+    {
+        $this->expectException(ValidationException::class);
+        (new DefinitionReader())->readArray(['name' => 'No states']);
+    }
+
+    public function testReadFile(): void
+    {
+        $machine = (new DefinitionReader())->readFile(dirname(__DIR__, 2) . '/Fixtures/minimal.json');
+
+        self::assertSame('Minimal', $machine->getName());
+    }
+
+    public function testReadMissingFileThrows(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('cannot be read');
+        (new DefinitionReader())->readFile(dirname(__DIR__, 2) . '/Fixtures/does-not-exist.json');
     }
 }

@@ -156,10 +156,13 @@ Events are the triggers that cause state transitions. Each event has a name and 
 ## Running the state machine
 
 ```php
+use Tlab\StateMachine\Reader\DefinitionReader;
 use Tlab\StateMachine\StateMachineRunner;
-use Tlab\StateMachine\TransitionStatus;
 
-$runner = new StateMachineRunner(file_get_contents('state-machine.json'));
+// Load a definition from JSON, a file or an array...
+$machine = (new DefinitionReader())->readFile('state-machine.json');
+// ...or use the shortcut that reads JSON: StateMachineRunner::fromJson($json)
+$runner = new StateMachineRunner($machine);
 
 // Returns the new state, or the current state if nothing happened
 $state = $runner->run('PendingPayment', 'pay', ['orderId' => 42]);
@@ -168,7 +171,13 @@ $state = $runner->run('PendingPayment', 'pay', ['orderId' => 42]);
 $result = $runner->apply('PendingPayment', 'pay', ['orderId' => 42]);
 $result->getState();
 $result->getStatus(); // TransitionStatus::Moved, ::Blocked or ::NoTransition
+
+$runner->can('PendingPayment', 'pay', ['orderId' => 42]); // evaluates conditions, no side effects
+$runner->availableEvents('PendingPayment');                // events leaving the state, conditions ignored
 ```
+
+The loaded definition (`StateMachine`) is immutable. The runner only needs it plus optional collaborators,
+described below.
 
 | Status         | Meaning                                                               |
 |----------------|-----------------------------------------------------------------------|
@@ -176,7 +185,75 @@ $result->getStatus(); // TransitionStatus::Moved, ::Blocked or ::NoTransition
 | `Blocked`      | Transitions exist for the state and event, but no condition passed.   |
 | `NoTransition` | The event is not available in that state.                             |
 
-An unknown state or event throws `UnknownStateException` or `UnknownEventException`. An invalid definition throws `ValidationException`, whose `getErrors()` returns the schema errors.
+### Errors
+
+Every exception thrown by the package extends `StateMachineException`.
+
+| Exception                | Thrown when                                                                          |
+|--------------------------|--------------------------------------------------------------------------------------|
+| `ValidationException`    | The definition is invalid. `getErrors()` returns the schema errors.                  |
+| `UnknownStateException`  | A state does not exist, or a subject has no state and there is no initial state.     |
+| `UnknownEventException`  | An event does not exist.                                                             |
+| `ResolutionException`    | A condition or command class does not exist or does not implement its interface.     |
+
+### Stateful subjects
+
+Instead of passing states around, apply events to an object that carries its own state.
+The state is read from the subject, and written back only when a transition is taken.
+A subject without a state starts from the state flagged `isCurrent`.
+
+```php
+use Tlab\StateMachine\Storage\StatefulInterface;
+
+class Order implements StatefulInterface
+{
+    private ?string $state = null;
+
+    public function getState(): ?string { return $this->state; }
+    public function setState(string $state): void { $this->state = $state; }
+}
+
+$order = new Order();
+$runner->applyTo($order, 'create');       // moves the order and updates its state
+$runner->canApplyTo($order, 'pay');
+$runner->availableEventsFor($order);
+```
+
+To persist state somewhere else (a repository, a cache, a plain object), pass your own
+`StateStorageInterface` as the `storage` argument. `InMemoryStateStorage` is provided for plain objects and tests.
+
+### Conditions and commands with dependencies
+
+By default conditions and commands are created with `new` and no arguments. Pass a PSR-11 container to
+have them built by your framework instead, so they can receive their dependencies. Classes the
+container does not know are still instantiated directly.
+
+```php
+use Tlab\StateMachine\Resolver\CommandResolver;
+use Tlab\StateMachine\Resolver\ConditionResolver;
+
+$runner = new StateMachineRunner(
+    $machine,
+    conditionResolver: new ConditionResolver($container),
+    commandResolver: new CommandResolver($container),
+);
+```
+
+To resolve them some other way, implement `ConditionResolverInterface` and `CommandResolverInterface`.
+
+### Events
+
+Pass any PSR-14 event dispatcher as the `dispatcher` argument to be notified of what happens.
+Nothing is dispatched by default.
+
+| Event                | Dispatched                                                                   |
+|----------------------|------------------------------------------------------------------------------|
+| `BeforeTransition`   | A transition was selected, before the event command runs.                    |
+| `AfterTransition`    | After the command ran and the subject's state was written.                   |
+| `TransitionBlocked`  | Transitions exist for the state and event, but no condition passed.          |
+
+Each event carries `machineName`, `source`, `event`, `data` and `subject` (`null` unless `applyTo()` was used),
+and `BeforeTransition` and `AfterTransition` also carry `target`.
 
 ## Installation
 

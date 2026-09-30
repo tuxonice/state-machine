@@ -4,22 +4,70 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine;
 
-use Tlab\StateMachine\Commands\CommandInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Tlab\StateMachine\Events\AfterTransition;
+use Tlab\StateMachine\Events\BeforeTransition;
+use Tlab\StateMachine\Events\NullEventDispatcher;
+use Tlab\StateMachine\Events\TransitionBlocked;
 use Tlab\StateMachine\Exceptions\UnknownEventException;
 use Tlab\StateMachine\Exceptions\UnknownStateException;
 use Tlab\StateMachine\Flowchart\Designer;
 use Tlab\StateMachine\Models\StateMachine;
-use Tlab\StateMachine\Reader\DefinitionReader;
 use Tlab\StateMachine\Models\Transition;
+use Tlab\StateMachine\Reader\DefinitionReader;
+use Tlab\StateMachine\Resolver\CommandResolver;
+use Tlab\StateMachine\Resolver\CommandResolverInterface;
+use Tlab\StateMachine\Resolver\ConditionResolver;
+use Tlab\StateMachine\Resolver\ConditionResolverInterface;
+use Tlab\StateMachine\Storage\StatefulStateStorage;
+use Tlab\StateMachine\Storage\StateStorageInterface;
 
+/**
+ * Runs events against a state machine definition.
+ *
+ * Every collaborator is optional. By default conditions and commands are instantiated without
+ * arguments, no events are dispatched, and subjects keep their own state (StatefulInterface).
+ */
 class StateMachineRunner
 {
-    private StateMachine $stateMachine;
+    private ConditionResolverInterface $conditionResolver;
 
-    public function __construct(private string $jsonDefinition)
-    {
-        $definitionReader = new DefinitionReader();
-        $this->stateMachine = $definitionReader->read($this->jsonDefinition);
+    private CommandResolverInterface $commandResolver;
+
+    private EventDispatcherInterface $dispatcher;
+
+    private StateStorageInterface $storage;
+
+    public function __construct(
+        private StateMachine $stateMachine,
+        ?ConditionResolverInterface $conditionResolver = null,
+        ?CommandResolverInterface $commandResolver = null,
+        ?EventDispatcherInterface $dispatcher = null,
+        ?StateStorageInterface $storage = null,
+    ) {
+        $this->conditionResolver = $conditionResolver ?? new ConditionResolver();
+        $this->commandResolver = $commandResolver ?? new CommandResolver();
+        $this->dispatcher = $dispatcher ?? new NullEventDispatcher();
+        $this->storage = $storage ?? new StatefulStateStorage();
+    }
+
+    /**
+     * @throws \Tlab\StateMachine\Exceptions\ValidationException
+     */
+    public static function fromJson(
+        string $jsonDefinition,
+        ?ConditionResolverInterface $conditionResolver = null,
+        ?CommandResolverInterface $commandResolver = null,
+        ?EventDispatcherInterface $dispatcher = null,
+        ?StateStorageInterface $storage = null,
+    ): self {
+        return new self(
+            (new DefinitionReader())->read($jsonDefinition),
+            $conditionResolver,
+            $commandResolver,
+            $dispatcher,
+            $storage,
+        );
     }
 
     /**
@@ -58,23 +106,78 @@ class StateMachineRunner
      */
     public function apply(string $currentState, string $event, array $data = []): TransitionResult
     {
+        return $this->transition($currentState, $event, $data, null);
+    }
+
+    /**
+     * Applies an event to a subject, reading its state from and writing it back to the storage.
+     *
+     * A subject without a state starts from the initial state (the one flagged isCurrent).
+     *
+     * @param object $subject
+     * @param string $event
+     * @param array<mixed> $data
+     *
+     * @return TransitionResult
+     * @throws UnknownStateException
+     * @throws UnknownEventException
+     */
+    public function applyTo(object $subject, string $event, array $data = []): TransitionResult
+    {
+        return $this->transition($this->stateOf($subject), $event, $data, $subject);
+    }
+
+    /**
+     * Whether applying the event to the state would move, evaluating conditions but causing no side effects.
+     *
+     * @param string $currentState
+     * @param string $event
+     * @param array<mixed> $data
+     *
+     * @throws UnknownStateException
+     * @throws UnknownEventException
+     */
+    public function can(string $currentState, string $event, array $data = []): bool
+    {
         $this->assertStateExists($currentState);
         $this->assertEventExists($event);
 
-        $candidates = $this->getTransitions($currentState, $event);
-        if ($candidates === []) {
-            return new TransitionResult(TransitionStatus::NoTransition, $currentState);
-        }
+        return $this->selectTransition($currentState, $event, $data) !== null;
+    }
 
-        foreach ($candidates as $transition) {
-            if ($transition->checkCondition($data)) {
-                $this->runEventCommand($event, $data);
+    /**
+     * @param object $subject
+     * @param string $event
+     * @param array<mixed> $data
+     *
+     * @throws UnknownStateException
+     * @throws UnknownEventException
+     */
+    public function canApplyTo(object $subject, string $event, array $data = []): bool
+    {
+        return $this->can($this->stateOf($subject), $event, $data);
+    }
 
-                return new TransitionResult(TransitionStatus::Moved, $transition->getTarget());
-            }
-        }
+    /**
+     * Events that have a transition leaving the state. Conditions are not evaluated, use can() for that.
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function availableEvents(string $state): array
+    {
+        $this->assertStateExists($state);
 
-        return new TransitionResult(TransitionStatus::Blocked, $currentState);
+        return $this->stateMachine->getAvailableEvents($state);
+    }
+
+    /**
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function availableEventsFor(object $subject): array
+    {
+        return $this->availableEvents($this->stateOf($subject));
     }
 
     public function getStateMachine(): StateMachine
@@ -105,39 +208,79 @@ class StateMachineRunner
         return $designer->renderMarkdown($this->stateMachine->toJson());
     }
 
+    /**
+     * @param array<mixed> $data
+     */
+    private function transition(string $currentState, string $event, array $data, ?object $subject): TransitionResult
+    {
+        $this->assertStateExists($currentState);
+        $this->assertEventExists($event);
+
+        $name = $this->stateMachine->getName();
+
+        if ($this->stateMachine->getTransitionsFor($currentState, $event) === []) {
+            return new TransitionResult(TransitionStatus::NoTransition, $currentState);
+        }
+
+        $transition = $this->selectTransition($currentState, $event, $data);
+        if ($transition === null) {
+            $this->dispatcher->dispatch(new TransitionBlocked($name, $currentState, $event, $data, $subject));
+
+            return new TransitionResult(TransitionStatus::Blocked, $currentState);
+        }
+
+        $target = $transition->getTarget();
+        $this->dispatcher->dispatch(new BeforeTransition($name, $currentState, $event, $target, $data, $subject));
+
+        $this->runEventCommand($event, $data);
+        if ($subject !== null) {
+            $this->storage->write($subject, $target);
+        }
+
+        $this->dispatcher->dispatch(new AfterTransition($name, $currentState, $event, $target, $data, $subject));
+
+        return new TransitionResult(TransitionStatus::Moved, $target);
+    }
 
     /**
-     * @return Transition[]
+     * The first transition for the state and event whose condition passes.
+     *
+     * @param array<mixed> $data
      */
-    private function getTransitions(string $currentState, string $event): array
+    private function selectTransition(string $currentState, string $event, array $data): ?Transition
     {
-        return array_values(array_filter(
-            $this->stateMachine->getTransitions(),
-            fn(Transition $transition) => $transition->getSource() === $currentState
-                && $transition->getEvent() === $event
-        ));
+        foreach ($this->stateMachine->getTransitionsFor($currentState, $event) as $transition) {
+            $condition = $transition->getCondition();
+            if ($condition === null || $this->conditionResolver->resolve($condition)->check($data)) {
+                return $transition;
+            }
+        }
+
+        return null;
+    }
+
+    private function stateOf(object $subject): string
+    {
+        $state = $this->storage->read($subject) ?? $this->stateMachine->getCurrentState();
+        if ($state === null) {
+            throw UnknownStateException::noInitialState();
+        }
+
+        return $state;
     }
 
     private function assertStateExists(string $state): void
     {
-        foreach ($this->stateMachine->getStates() as $machineState) {
-            if ($machineState->getName() === $state) {
-                return;
-            }
+        if (!$this->stateMachine->hasState($state)) {
+            throw UnknownStateException::forState($state);
         }
-
-        throw UnknownStateException::forState($state);
     }
 
     private function assertEventExists(string $event): void
     {
-        foreach ($this->stateMachine->getEvents() as $machineEvent) {
-            if ($machineEvent->getName() === $event) {
-                return;
-            }
+        if (!$this->stateMachine->hasEvent($event)) {
+            throw UnknownEventException::forEvent($event);
         }
-
-        throw UnknownEventException::forEvent($event);
     }
 
     /**
@@ -148,14 +291,9 @@ class StateMachineRunner
      */
     private function runEventCommand(string $event, array $data): void
     {
-        foreach ($this->stateMachine->getEvents() as $machineEvent) {
-            if ($machineEvent->getName() === $event) {
-                if ($machineEvent->getCommand()) {
-                    /** @var CommandInterface $command */
-                    $command = new ($machineEvent->getCommand());
-                    $command->run($data);
-                }
-            }
+        $command = $this->stateMachine->getEvent($event)?->getCommand();
+        if ($command !== null) {
+            $this->commandResolver->resolve($command)->run($data);
         }
     }
 }

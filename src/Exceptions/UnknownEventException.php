@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Exceptions;
 
-use InvalidArgumentException;
-
-class UnknownEventException extends InvalidArgumentException
+class UnknownEventException extends StateMachineException
 {
     public static function forEvent(string $event): self
     {
