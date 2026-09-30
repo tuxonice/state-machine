@@ -8,4 +8,20 @@ use Exception;
 
 class ValidationException extends Exception
 {
+    /**
+     * @param string $message
+     * @param array<mixed> $errors Schema validation errors, keyed by JSON pointer
+     */
+    public function __construct(string $message = '', private array $errors = [])
+    {
+        parent::__construct($message);
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
 }

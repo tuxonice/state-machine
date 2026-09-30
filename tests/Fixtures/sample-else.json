@@ -1,0 +1,18 @@
+{
+  "name": "If-else machine",
+  "states": [
+    { "name": "Pending" },
+    { "name": "Paid" },
+    { "name": "Cancelled" },
+    { "name": "Blocked" }
+  ],
+  "transitions": [
+    { "source": "Pending", "target": "Paid", "event": "pay", "condition": "Tlab\\Tests\\FalseCondition" },
+    { "source": "Pending", "target": "Cancelled", "event": "pay", "condition": null },
+    { "source": "Paid", "target": "Blocked", "event": "block", "condition": "Tlab\\Tests\\FalseCondition" }
+  ],
+  "events": [
+    { "name": "pay", "command": "Tlab\\Tests\\RecordingCommand" },
+    { "name": "block", "command": "Tlab\\Tests\\RecordingCommand" }
+  ]
+}

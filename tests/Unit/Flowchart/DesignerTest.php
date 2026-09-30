@@ -146,7 +146,7 @@ GRAPHCHART;
         ]);
 
         $this->expectException(GraphRenderException::class);
-        $this->expectExceptionMessage('State machine must have at least one state');
+        $this->expectExceptionMessage('Invalid state machine definition - /states:');
 
         $designer->renderGraph($json);
     }

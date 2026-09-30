@@ -23,25 +23,21 @@ For example:
 
 Each state reflects a specific milestone in the order fulfillment process, allowing for better tracking and management.
 
-A list of state elements can be defined with this simple JSON. 
-First, the state has a name that allows referencing the state.
+A list of state elements can be defined with this simple JSON.
+Each state has a name that allows referencing the state, and can optionally be flagged as the current one.
 
-```
+```json
 "states": [
     {
       "name": "new",
-      "isCurrent": true,
-      "onEnter": true,
-      "timeout": null,
+      "isCurrent": true
     },
     {
-      "name": "paid",
-      "timeout": "24 hours",
+      "name": "paid"
     },
     {
       "name": "shipped"
-    },
-    ....
+    }
 ]
 ```
 
@@ -60,39 +56,36 @@ Transitions are straightforward:
 
 This simple structure allows for flexible state management while maintaining clear rules for state progression.
 
-```
+```json
 "transitions": [
     {
       "source": "Start",
       "target": "InitialContact",
       "event": "ClientInquires",
-      "condition": null,
-      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
-      "manual": false
+      "condition": null
     },
     {
       "source": "InitialContact",
       "target": "Qualification",
-      "event": "AgentQualifiesClient",
-      "condition": null,
-      "command": "Tlab\\StateMachine\\Conditions\\SendEmail",
-      "manual": true
-    },
-    ...
+      "event": "AgentQualifiesClient"
+    }
 ]
 ```
+
+`source`, `target` and `event` are required. `condition` is optional.
+
 ### Conditions
 
 #### Boolean conditions
 A transition can be conditioned: the state machine can move from one state to another if a certain condition associated 
 with that transition is being satisfied. This can be modeled in the JSON file that describes the process, as in the following example:
 
-```
+```json
 {
   "source": "paid",
   "target": "shipped",
   "event": "ship it",
-  "condition": "Tlab\StateMachine\Conditions\PaymentIsCompleted"
+  "condition": "App\\Conditions\\PaymentIsCompleted"
 }
 ```
 In this case when the transition is triggered, the system will check if the payment is completed. If it is, the transition will be allowed, otherwise it will not be allowed, and the state machine will remain in the current state.
@@ -101,14 +94,14 @@ Conditions can be any class that implements the `ConditionInterface`.
 #### if-else conditions
 
 There are cases where a transition can be conditioned based on a boolean condition. For this case we create two transitions, the first one is the transition in case of the boolean condition being satisfied, and the second one is the transition in case of the boolean condition not being satisfied.
-Note that the two transitions must have the same event name. Only the condition of the first transition is checked, and if it is satisfied, the transition is allowed. Otherwise the state machine moves to the target state of the second transition.
+Note that the two transitions must have the same source and event name. Transitions are tried in the order they are defined: the first one whose condition is satisfied is taken. A transition without a condition always matches, so it acts as the "else" branch and should be listed last.
 
-```
+```json
 {
   "source": "payment-pending",
   "target": "paid",
   "event": "pay",
-  "condition": "Tlab\StateMachine\Conditions\IsOrderPaid"
+  "condition": "App\\Conditions\\IsOrderPaid"
 },
 {
   "source": "payment-pending",
@@ -131,26 +124,59 @@ Note that the two transitions must have the same event name. Only the condition 
 
 ## Events
 
-Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when the state jumps to the target state of the transition.
+Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when a transition for the event is taken.
 
-```
+```json
 "events": [
     {
       "name": "ClientInquires"
     },
     {
-      "name": "AgentQualifiesClient"
+      "name": "AgentQualifiesClient",
+      "command": "App\\Commands\\SendQualificationEmail",
+      "manual": true
     },
     {
-      "name": "StartPropertySearch"
-    },
-    {
-      "name": "PropertyFound"
+      "name": "PaymentTimeout",
+      "timeout": "24 hours"
     }
-  ]
+]
 ```
 
+| Field     | Description                                                                       |
+|-----------|-----------------------------------------------------------------------------------|
+| `name`    | Required. Referenced by the `event` of transitions.                               |
+| `command` | Optional class implementing `CommandInterface`, run when the transition is taken. |
+| `manual`  | Optional. The event is meant to be triggered manually.                            |
+| `onEnter` | Optional. The event is meant to be triggered automatically on entering a state.   |
+| `timeout` | Optional. The event is meant to be triggered after a period of time.              |
 
+> `manual`, `onEnter` and `timeout` are part of the definition format and are validated and preserved, but the runner does not act on them yet.
+
+## Running the state machine
+
+```php
+use Tlab\StateMachine\StateMachineRunner;
+use Tlab\StateMachine\TransitionStatus;
+
+$runner = new StateMachineRunner(file_get_contents('state-machine.json'));
+
+// Returns the new state, or the current state if nothing happened
+$state = $runner->run('PendingPayment', 'pay', ['orderId' => 42]);
+
+// Same, but tells you what happened
+$result = $runner->apply('PendingPayment', 'pay', ['orderId' => 42]);
+$result->getState();
+$result->getStatus(); // TransitionStatus::Moved, ::Blocked or ::NoTransition
+```
+
+| Status         | Meaning                                                               |
+|----------------|-----------------------------------------------------------------------|
+| `Moved`        | A transition was taken and the event command (if any) was run.        |
+| `Blocked`      | Transitions exist for the state and event, but no condition passed.   |
+| `NoTransition` | The event is not available in that state.                             |
+
+An unknown state or event throws `UnknownStateException` or `UnknownEventException`. An invalid definition throws `ValidationException`, whose `getErrors()` returns the schema errors.
 
 ## Installation
 
@@ -244,55 +270,61 @@ At various stages (like Property Search, Viewing, or Negotiation), the client ma
   "transitions": [
     {
       "source": "Start",
-      "to": "InitialContact",
+      "target": "InitialContact",
       "event": "ClientInquires",
       "condition": null
     },
     {
       "source": "InitialContact",
-      "to": "Qualification",
+      "target": "Qualification",
       "event": "AgentQualifiesClient",
       "condition": null
     },
     {
       "source": "Qualification",
-      "to": "PropertySearch",
+      "target": "PropertySearch",
       "event": "StartPropertySearch",
       "condition": null
     },
     {
       "source": "PropertySearch",
-      "to": "PropertyViewing",
+      "target": "PropertyViewing",
       "event": "PropertyFound",
-      "condition": "SearchProperty::class"
+      "condition": "App\\Conditions\\PropertyWasFound"
     },
     {
       "source": "PropertySearch",
-      "to": "ClientExit",
+      "target": "ClientExit",
       "event": "NoSuitablePropertyFound",
       "condition": null
     },
     {
       "source": "PropertyViewing",
-      "to": "OfferNegotiation",
+      "target": "OfferNegotiation",
       "event": "ClientInterested",
       "condition": null
     },
     {
       "source": "PropertyViewing",
-      "to": "ClientExit",
+      "target": "ClientExit",
+      "event": "ClientDeclinesOffer",
+      "condition": null
+    },
+    {
+      "source": "OfferNegotiation",
+      "target": "ContractSigning",
       "event": "SuccessfulNegotiation",
       "condition": null
     },
     {
       "source": "OfferNegotiation",
-      "to": "ContractSigning",
-      "event": "SuccessfulNegotiation",
+      "target": "ClientExit",
+      "event": "ClientDeclinesOffer",
       "condition": null
     },
     {
       "source": "ContractSigning",
-      "to": "DealClosed",
+      "target": "DealClosed",
       "event": "DealCompleted",
       "condition": null
     }
