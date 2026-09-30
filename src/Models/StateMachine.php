@@ -6,49 +6,18 @@ namespace Tlab\StateMachine\Models;
 
 class StateMachine
 {
-    private string $name;
-
     /**
-     * @var array<\Tlab\StateMachine\Models\Event>
+     * @param string $name
+     * @param array<State> $states
+     * @param array<Transition> $transitions
+     * @param array<Event> $events
      */
-    private array $events = [];
-
-    /**
-     * @var array<\Tlab\StateMachine\Models\Transition>
-     */
-    private array $transitions = [];
-
-    /**
-     * @var array<\Tlab\StateMachine\Models\State>
-     */
-    private array $states = [];
-
-    public function setName(string $name): self
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    public function addEvent(Event $event): self
-    {
-        $this->events[] = $event;
-
-        return $this;
-    }
-
-    public function addTransition(Transition $transition): self
-    {
-        $this->transitions[] = $transition;
-
-        return $this;
-    }
-
-    public function addState(State $state): self
-    {
-        $this->states[] = $state;
-
-        return $this;
+    public function __construct(
+        private readonly string $name,
+        private readonly array $states,
+        private readonly array $transitions,
+        private readonly array $events,
+    ) {
     }
 
     /**
@@ -78,6 +47,65 @@ class StateMachine
     public function getName(): string
     {
         return $this->name;
+    }
+
+    public function hasState(string $name): bool
+    {
+        foreach ($this->states as $state) {
+            if ($state->getName() === $name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasEvent(string $name): bool
+    {
+        return $this->getEvent($name) !== null;
+    }
+
+    public function getEvent(string $name): ?Event
+    {
+        foreach ($this->events as $event) {
+            if ($event->getName() === $name) {
+                return $event;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Transitions leaving the state for the event, in definition order.
+     *
+     * @return Transition[]
+     */
+    public function getTransitionsFor(string $state, string $event): array
+    {
+        return array_values(array_filter(
+            $this->transitions,
+            fn(Transition $transition) => $transition->getSource() === $state
+                && $transition->getEvent() === $event
+        ));
+    }
+
+    /**
+     * Distinct events that have a transition leaving the state, in definition order.
+     * Conditions are not evaluated.
+     *
+     * @return string[]
+     */
+    public function getAvailableEvents(string $state): array
+    {
+        $events = [];
+        foreach ($this->transitions as $transition) {
+            if ($transition->getSource() === $state) {
+                $events[$transition->getEvent()] = true;
+            }
+        }
+
+        return array_keys($events);
     }
 
     public function getCurrentState(): ?string

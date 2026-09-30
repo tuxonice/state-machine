@@ -43,43 +43,38 @@ class DefinitionReader
 
         $definitionData = json_decode($jsonDefinition, true);
 
-        $stateMachine = new StateMachine();
-        $stateMachine->setName($definitionData['name']);
-        $this->setStates($stateMachine, $definitionData);
-        $this->setTransitions($stateMachine, $definitionData);
-        $this->setEvents($stateMachine, $definitionData);
-
-        return $stateMachine;
+        return new StateMachine(
+            $definitionData['name'],
+            array_map(
+                fn(array $state) => new State($state['name'], $state['isCurrent'] ?? false),
+                $definitionData['states']
+            ),
+            array_map(fn(array $data) => Transition::createFromArray($data), $definitionData['transitions']),
+            array_map(fn(array $data) => Event::createFromArray($data), $definitionData['events']),
+        );
     }
 
     /**
-     * @param StateMachine $stateMachine
-     * @param array<string,string|array<mixed>> $definitionData
+     * @param array<string,mixed> $definition
      *
-     * @return void
+     * @return StateMachine
+     * @throws ValidationException
      */
-    private function setStates(StateMachine $stateMachine, array $definitionData): void
+    public function readArray(array $definition): StateMachine
     {
-        foreach ($definitionData['states'] as $stateData) {
-            $stateMachine->addState(
-                (new State($stateData['name']))->setIsCurrent($stateData['isCurrent'] ?? false)
-            );
-        }
+        return $this->read(json_encode($definition, JSON_THROW_ON_ERROR));
     }
 
-    private function setTransitions(StateMachine $stateMachine, mixed $definitionData): void
+    /**
+     * @throws ValidationException
+     */
+    public function readFile(string $path): StateMachine
     {
-        foreach ($definitionData['transitions'] as $transitionData) {
-            $transition = Transition::createFromArray($transitionData);
-            $stateMachine->addTransition($transition);
+        $contents = is_readable($path) ? file_get_contents($path) : false;
+        if ($contents === false) {
+            throw new ValidationException("Definition file '{$path}' cannot be read");
         }
-    }
 
-    private function setEvents(StateMachine $stateMachine, mixed $definitionData): void
-    {
-        foreach ($definitionData['events'] as $eventData) {
-            $event = Event::createFromArray($eventData);
-            $stateMachine->addEvent($event);
-        }
+        return $this->read($contents);
     }
 }

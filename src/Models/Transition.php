@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Models;
 
-use Tlab\StateMachine\Conditions\ConditionInterface;
-
 class Transition
 {
     private string $source;
@@ -56,22 +54,5 @@ class Transition
     public function getCondition(): ?string
     {
         return $this->condition;
-    }
-
-    /**
-     * @param array<mixed> $data
-     *
-     * @return bool
-     */
-    public function checkCondition(array $data): bool
-    {
-        if ($this->condition === null) {
-            return true;
-        }
-
-        /** @var ConditionInterface $condition */
-        $condition = (new $this->condition());
-
-        return $condition->check($data);
     }
 }

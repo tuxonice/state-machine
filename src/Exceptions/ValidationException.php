@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Exceptions;
 
-use Exception;
-
-class ValidationException extends Exception
+class ValidationException extends StateMachineException
 {
     /**
      * @param string $message

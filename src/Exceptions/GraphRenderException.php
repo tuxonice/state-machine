@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine\Exceptions;
 
-class GraphRenderException extends \RuntimeException
+class GraphRenderException extends StateMachineException
 {
     public static function fromJsonError(string $message): self
     {
