@@ -16,8 +16,8 @@ fi
 
 set -e
 
-# Match Apache user to the host user so the bind-mounted project is writable
-# inside the container (e.g. SQLite test database, var/cache, var/logs).
+# Match the www-data user to the host user so the bind-mounted project is writable
+# inside the container (e.g. .phpunit.cache, vendor).
 HOST_UID=$(stat -c %u /var/www/html)
 HOST_GID=$(stat -c %g /var/www/html)
 WWW_DATA_UID=$(id -u www-data)
@@ -29,14 +29,6 @@ if [ "$HOST_UID" != "$WWW_DATA_UID" ] || [ "$HOST_GID" != "$WWW_DATA_GID" ]; the
     # /var/www is www-data's HOME; keep it non-recursive, /var/www/html is the
     # bind-mounted project.
     chown www-data:www-data /var/www
-    for dir in /var/www/html/var /var/www/html/tests/_data; do
-        [ -d "$dir" ] && chown -R www-data:www-data "$dir"
-    done
-fi
-
-# first arg is `-f` or `--some-option`
-if [ "${1#-}" != "$1" ]; then
-	set -- apache2-foreground "$@"
 fi
 
 exec "$@"

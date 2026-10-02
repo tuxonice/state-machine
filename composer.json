@@ -1,5 +1,5 @@
 {
-    "name": "tlab/state-machine",
+    "name": "tuxonice/state-machine",
     "description": "PHP Package to manage state machines",
     "type": "library",
     "keywords": [
