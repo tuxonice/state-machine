@@ -5,7 +5,5 @@ services:
       dockerfile: docker/application/Dockerfile
     working_dir: /var/www/html
     tty: true
-    ports:
-      - 80:80
     volumes:
       - ./:/var/www/html
