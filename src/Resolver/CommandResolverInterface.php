@@ -10,7 +10,7 @@ use Tlab\StateMachine\Exceptions\ResolutionException;
 interface CommandResolverInterface
 {
     /**
-     * @param class-string $class
+     * @param string $class
      *
      * @throws ResolutionException
      */

@@ -10,112 +10,61 @@ use JBZoo\MermaidPHP\Node;
 use JBZoo\MermaidPHP\Render;
 use Tlab\StateMachine\Models\State;
 use Tlab\StateMachine\Models\Transition;
-use Tlab\StateMachine\Reader\DefinitionReader;
 use Tlab\StateMachine\Models\StateMachine;
-use Tlab\StateMachine\Exceptions\ValidationException;
 use Tlab\StateMachine\Exceptions\GraphRenderException;
 
 /**
- * Designer class for generating visual representations of state machines.
- *
- * This class provides functionality to create both HTML and Markdown
- * representations of state machines using the Mermaid graph syntax.
+ * Renders state machines with Mermaid, through the optional jbzoo/mermaid-php package.
  */
-class Designer
+class Designer implements DiagramRenderer
 {
-    /** @var Graph The mermaid graph instance */
-    private readonly Graph $graph;
-
-    private string $title;
-
+    /**
+     * @throws GraphRenderException when jbzoo/mermaid-php is not installed
+     */
     public function __construct()
     {
-        $this->graph = new Graph();
+        if (!class_exists(Graph::class)) {
+            throw GraphRenderException::missingDependency('jbzoo/mermaid-php');
+        }
     }
 
-    /**
-     * Renders the state machine as an HTML graph using Mermaid.
-     *
-     * @param string $jsonDefinition JSON string containing the state machine definition
-     * @return string HTML representation of the state machine graph
-     */
-    public function renderGraph(string $jsonDefinition): string
+    public function renderHtml(StateMachine $machine): string
     {
-        if (empty($jsonDefinition)) {
-            throw GraphRenderException::fromJsonError('JSON definition cannot be empty');
-        }
-
         try {
-            $this->buildGraph($jsonDefinition);
-
-            return $this->graph->renderHtml([
+            return $this->buildGraph($machine)->renderHtml([
                 'theme'       => Render::THEME_DEFAULT,
-                'title'       => $this->title,
-                'show-zoom'   => false,
+                'title'       => $machine->getName(),
+                'show-zoom'   => '0',
             ]);
         } catch (\Exception $e) {
             throw GraphRenderException::fromRenderError($e->getMessage());
         }
     }
 
-    /**
-     * Renders the state machine as a Markdown graph using Mermaid syntax.
-     *
-     * @param string $jsonDefinition JSON string containing the state machine definition
-     * @return string Markdown representation of the state machine graph
-     */
-    public function renderMarkdown(string $jsonDefinition): string
+    public function renderMarkdown(StateMachine $machine): string
     {
-        if (empty($jsonDefinition)) {
-            throw GraphRenderException::fromJsonError('JSON definition cannot be empty');
-        }
-
         try {
-            $this->buildGraph($jsonDefinition);
-
-            return $this->graph->render();
+            return $this->buildGraph($machine)->render();
         } catch (\Exception $e) {
             throw GraphRenderException::fromRenderError($e->getMessage());
         }
     }
 
     /**
-     * Builds the internal graph representation from a JSON definition.
-     *
-     * This method reads the state machine definition, creates the graph structure,
-     * and sets up all states and transitions.
-     *
-     * @param string $jsonDefinition JSON string containing the state machine definition
-     * @throws ValidationException If the JSON definition is invalid or malformed
+     * Builds a fresh graph with a node per state and a link per transition.
      */
-    private function buildGraph(string $jsonDefinition): void
+    private function buildGraph(StateMachine $machine): Graph
     {
-        try {
-            json_decode($jsonDefinition, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw GraphRenderException::fromJsonError($e->getMessage());
-        }
-
-        $definitionReader = new DefinitionReader();
-        $machine = $definitionReader->read($jsonDefinition);
-
-        if (empty($machine->getName())) {
-            throw GraphRenderException::fromRenderError('State machine must have a name');
-        }
-
-        if (empty($machine->getStates())) {
-            throw GraphRenderException::fromRenderError('State machine must have at least one state');
-        }
-
+        $graph = new Graph();
         $nodes = $this->createStates($machine);
 
-        $this->title = $machine->getName();
-
         foreach ($nodes as $node) {
-            $this->graph->addNode($node);
+            $graph->addNode($node);
         }
 
-        $this->createTransitions($machine, $nodes);
+        $this->createTransitions($machine, $nodes, $graph);
+
+        return $graph;
     }
 
     /**
@@ -151,8 +100,9 @@ class Designer
      *
      * @param StateMachine $machine The state machine instance
      * @param array<string, Node> $nodes Array of nodes indexed by state name
+     * @param Graph $graph The graph to add the links to
      */
-    private function createTransitions(StateMachine $machine, array $nodes): void
+    private function createTransitions(StateMachine $machine, array $nodes, Graph $graph): void
     {
         $transitions = $machine->getTransitions();
 
@@ -179,7 +129,7 @@ class Designer
             }
 
             $link = new Link($nodeFrom, $nodeTo, $linkText);
-            $this->graph->addLink($link);
+            $graph->addLink($link);
         }
     }
 

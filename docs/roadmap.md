@@ -22,7 +22,7 @@ main
 | 1. Make what exists correct | `sm-8-phase-1-core-correctness` | Done |
 | 2. Framework-agnostic core | `sm-8-phase-2-framework-agnostic-core` | Done |
 | 3. Advanced workflow features | `sm-8-phase-3-advanced-features` | Done, except sub-processes |
-| 4. Adoption | `sm-8-phase-4-adoption` | Not started |
+| 4. Adoption | `sm-8-phase-4-adoption` | Done, except the `0.1.0` tag |
 
 Rules for every phase:
 - Test first (red, green, refactor). `phpunit`, `phpstan` and `phpcs` must be green before a phase is done.
@@ -110,8 +110,17 @@ Decisions:
 
 Branch: `sm-8-phase-4-adoption`
 
-- [ ] Make diagrams optional: move `jbzoo/mermaid-php` to `suggest`, and have `Designer` implement a `DiagramRenderer` interface.
-- [ ] Laravel bridge (service provider, container resolver) and Symfony bridge (bundle or autowired resolvers), as thin packages or documented recipes.
-- [ ] Real installation and usage README. Move sample machines to `examples/`, remove `public/`, add `.gitattributes`, and align the composer name with the namespace.
-- [ ] CI: PHP 8.2 to 8.5 matrix, coverage, PHPStan 2 at level 8 or higher, `composer validate`, `--prefer-lowest`.
-- [ ] Tag `0.1.0`.
+- [x] Make diagrams optional: `jbzoo/mermaid-php` moved to `suggest` (and `require-dev`), and `Designer` implements a `DiagramRenderer` interface.
+- [x] Laravel and Symfony integration, as documented recipes in `docs/integrations/`.
+- [x] Real installation and usage README. Sample machines moved to `examples/`, `public/` removed, `.gitattributes` added, composer name aligned with the namespace.
+- [x] CI: PHP 8.2 to 8.5 matrix, coverage, PHPStan 2 at level 8, `composer validate`, `--prefer-lowest`.
+- [ ] Tag `0.1.0`, after this branch is merged.
+
+Decisions:
+- `DiagramRenderer` works on a `StateMachine` model, not on JSON. `Designer::renderGraph(string)` and `renderMarkdown(string)` are replaced by `renderHtml(StateMachine)` and `renderMarkdown(StateMachine)`, and a `Designer` now builds a fresh graph per call (it used to accumulate nodes when reused). `generateHtmlDiagram()` and `generateMarkdownDiagram()` take an optional renderer. Without mermaid installed, `new Designer()` throws `GraphRenderException`.
+- Bridges are recipes, not packages: the PSR-11 and PSR-14 support from phase 2 means no framework code is needed beyond wiring. Packages can be split out later if the recipes grow. The recipes are untested against real applications.
+- The composer name is now `tlab/state-machine`, to match the `Tlab\` namespace. The alternative was renaming the namespace.
+- The sample condition and command classes moved to `tests/Unit/Support`, and the old `src/Machines/sample.json` is now `examples/order.json` with placeholder class names.
+- The Designer's HTML test compares the graph and title, not the whole page, because the page markup changed between `jbzoo/mermaid-php` versions and broke `--prefer-lowest`.
+- Level 8 needed small fixes only: `toJson()` throws on encoding errors, resolver interfaces take `string` (not `class-string`) since definitions are untrusted, and the Mermaid `show-zoom` option is passed as `'0'` to satisfy the library's typing.
+- Coverage is generated on PHP 8.4 and uploaded as a build artifact, with no external service.

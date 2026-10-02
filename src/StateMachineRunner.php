@@ -13,6 +13,8 @@ use Tlab\StateMachine\Events\TransitionBlocked;
 use Tlab\StateMachine\Exceptions\OnEnterLoopException;
 use Tlab\StateMachine\Exceptions\UnknownEventException;
 use Tlab\StateMachine\Exceptions\UnknownStateException;
+use Tlab\StateMachine\Exceptions\GraphRenderException;
+use Tlab\StateMachine\Flowchart\DiagramRenderer;
 use Tlab\StateMachine\Flowchart\Designer;
 use Tlab\StateMachine\Models\Event;
 use Tlab\StateMachine\Models\StateMachine;
@@ -277,26 +279,26 @@ class StateMachineRunner
     }
 
     /**
-     * Generates a Mermaid HTML diagram of the state machine
+     * Generates an HTML diagram of the state machine.
      *
-     * @return string HTML representation of the state machine diagram
+     * Uses the Mermaid Designer, which needs the optional jbzoo/mermaid-php package, unless
+     * another renderer is given.
+     *
+     * @throws GraphRenderException
      */
-    public function generateHtmlDiagram(): string
+    public function generateHtmlDiagram(?DiagramRenderer $renderer = null): string
     {
-        $designer = new Designer();
-
-        return $designer->renderGraph($this->stateMachine->toJson());
+        return ($renderer ?? new Designer())->renderHtml($this->stateMachine);
     }
 
     /**
-     * Generates a Mermaid Markdown diagram of the state machine
+     * Generates a Markdown diagram of the state machine, see generateHtmlDiagram().
      *
-     * @return string Markdown representation of the state machine diagram
+     * @throws GraphRenderException
      */
-    public function generateMarkdownDiagram(): string
+    public function generateMarkdownDiagram(?DiagramRenderer $renderer = null): string
     {
-        $designer = new Designer();
-        return $designer->renderMarkdown($this->stateMachine->toJson());
+        return ($renderer ?? new Designer())->renderMarkdown($this->stateMachine);
     }
 
     /**

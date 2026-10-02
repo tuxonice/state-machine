@@ -1,8 +1,8 @@
 <?php
 
-declare(strict_types=1);
+namespace Tlab\Tests\Support;
 
-namespace Tlab\StateMachine\Commands;
+use Tlab\StateMachine\Commands\CommandInterface;
 
 class SampleCommand implements CommandInterface
 {

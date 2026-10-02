@@ -11,7 +11,7 @@ This is a PHP package for managing state machines in a flexible and framework-ag
 ### Dependencies
 
 #### Main Dependencies
-- **jbzoo/mermaid-php**: Used for generating Mermaid.js compatible diagrams for visualizing state machines.
+- **jbzoo/mermaid-php** (optional, suggested): Used for generating Mermaid.js compatible diagrams for visualizing state machines.
 - **opis/json-schema**: Provides JSON Schema validation for the state machine configuration files.
 
 #### Development Dependencies
@@ -28,7 +28,6 @@ src/
 ├── Conditions/     # Condition classes for transition guards
 ├── Exceptions/     # Custom exception classes
 ├── Flowchart/      # Mermaid.js diagram generation
-├── Machines/       # Core state machine implementation
 ├── Models/         # Data models
 ├── Reader/         # Configuration file readers
 └── Validator/      # Configuration validation

@@ -1,8 +1,8 @@
 <?php
 
-declare(strict_types=1);
+namespace Tlab\Tests\Support;
 
-namespace Tlab\StateMachine\Conditions;
+use Tlab\StateMachine\Conditions\ConditionInterface;
 
 class SampleCondition implements ConditionInterface
 {

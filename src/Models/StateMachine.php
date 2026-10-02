@@ -188,7 +188,7 @@ class StateMachine
             ];
         }
 
-        return json_encode($result, JSON_PRETTY_PRINT);
+        return json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
     }
 
     /**
