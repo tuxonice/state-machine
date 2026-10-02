@@ -174,6 +174,10 @@ class Designer
                 $linkText .= "\ncmd:" . $eventsList[$transition->getEvent()]->getCommand();
             }
 
+            if ($transition->getCommand()) {
+                $linkText .= "\ncmd:" . $transition->getCommand();
+            }
+
             $link = new Link($nodeFrom, $nodeTo, $linkText);
             $this->graph->addLink($link);
         }

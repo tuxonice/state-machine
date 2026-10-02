@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tlab\StateMachine;
 
+use DateTimeImmutable;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Tlab\StateMachine\Events\AfterTransition;
 use Tlab\StateMachine\Events\BeforeTransition;
 use Tlab\StateMachine\Events\NullEventDispatcher;
 use Tlab\StateMachine\Events\TransitionBlocked;
+use Tlab\StateMachine\Exceptions\OnEnterLoopException;
 use Tlab\StateMachine\Exceptions\UnknownEventException;
 use Tlab\StateMachine\Exceptions\UnknownStateException;
 use Tlab\StateMachine\Flowchart\Designer;
+use Tlab\StateMachine\Models\Event;
 use Tlab\StateMachine\Models\StateMachine;
 use Tlab\StateMachine\Models\Transition;
 use Tlab\StateMachine\Reader\DefinitionReader;
@@ -19,6 +22,9 @@ use Tlab\StateMachine\Resolver\CommandResolver;
 use Tlab\StateMachine\Resolver\CommandResolverInterface;
 use Tlab\StateMachine\Resolver\ConditionResolver;
 use Tlab\StateMachine\Resolver\ConditionResolverInterface;
+use Tlab\StateMachine\Scheduler\NullTimeoutScheduler;
+use Tlab\StateMachine\Scheduler\TimeoutParser;
+use Tlab\StateMachine\Scheduler\TimeoutScheduler;
 use Tlab\StateMachine\Storage\StatefulStateStorage;
 use Tlab\StateMachine\Storage\StateStorageInterface;
 
@@ -30,6 +36,11 @@ use Tlab\StateMachine\Storage\StateStorageInterface;
  */
 class StateMachineRunner
 {
+    /**
+     * Most onEnter transitions chained after one event, to stop cycles in a definition.
+     */
+    public const MAX_ON_ENTER_TRANSITIONS = 50;
+
     private ConditionResolverInterface $conditionResolver;
 
     private CommandResolverInterface $commandResolver;
@@ -38,17 +49,21 @@ class StateMachineRunner
 
     private StateStorageInterface $storage;
 
+    private TimeoutScheduler $scheduler;
+
     public function __construct(
         private StateMachine $stateMachine,
         ?ConditionResolverInterface $conditionResolver = null,
         ?CommandResolverInterface $commandResolver = null,
         ?EventDispatcherInterface $dispatcher = null,
         ?StateStorageInterface $storage = null,
+        ?TimeoutScheduler $scheduler = null,
     ) {
         $this->conditionResolver = $conditionResolver ?? new ConditionResolver();
         $this->commandResolver = $commandResolver ?? new CommandResolver();
         $this->dispatcher = $dispatcher ?? new NullEventDispatcher();
         $this->storage = $storage ?? new StatefulStateStorage();
+        $this->scheduler = $scheduler ?? new NullTimeoutScheduler();
     }
 
     /**
@@ -60,6 +75,7 @@ class StateMachineRunner
         ?CommandResolverInterface $commandResolver = null,
         ?EventDispatcherInterface $dispatcher = null,
         ?StateStorageInterface $storage = null,
+        ?TimeoutScheduler $scheduler = null,
     ): self {
         return new self(
             (new DefinitionReader())->read($jsonDefinition),
@@ -67,6 +83,7 @@ class StateMachineRunner
             $commandResolver,
             $dispatcher,
             $storage,
+            $scheduler,
         );
     }
 
@@ -180,6 +197,80 @@ class StateMachineRunner
         return $this->availableEvents($this->stateOf($subject));
     }
 
+    /**
+     * Events that need a person to trigger them: manual events with a transition leaving the state.
+     * Conditions are not evaluated, use can() for that.
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function availableManualEvents(string $state): array
+    {
+        $this->assertStateExists($state);
+
+        return array_map(
+            fn(Event $event) => $event->getName(),
+            $this->stateMachine->getManualEvents($state)
+        );
+    }
+
+    /**
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function availableManualEventsFor(object $subject): array
+    {
+        return $this->availableManualEvents($this->stateOf($subject));
+    }
+
+    /**
+     * Schedules the timeout events of the subject's current state, replacing what was scheduled before.
+     *
+     * This happens by itself whenever applyTo() moves the subject. Call it for subjects that have not
+     * moved yet, e.g. right after creating them in their initial state.
+     *
+     * @throws UnknownStateException
+     */
+    public function scheduleTimeouts(object $subject, ?DateTimeImmutable $now = null): void
+    {
+        $state = $this->stateOf($subject);
+        $this->assertStateExists($state);
+        $now ??= new DateTimeImmutable();
+
+        $this->scheduler->cancel($subject);
+        foreach ($this->stateMachine->getTimeoutEvents($state) as $event) {
+            $this->scheduler->schedule(
+                $subject,
+                $state,
+                $event->getName(),
+                TimeoutParser::dueAt($now, (string) $event->getTimeout())
+            );
+        }
+    }
+
+    /**
+     * Applies every timeout event that is due. Call it from cron or a queue worker.
+     *
+     * A timeout is skipped when its subject is no longer in the state it was scheduled for. One whose
+     * conditions do not pass is dropped, it is not retried.
+     *
+     * @return TransitionResult[] One result per timeout applied
+     */
+    public function processTimeouts(?DateTimeImmutable $now = null): array
+    {
+        $results = [];
+        foreach ($this->scheduler->pullDue($now ?? new DateTimeImmutable()) as $timeout) {
+            $subject = $timeout->getSubject();
+            if ($this->storage->read($subject) !== $timeout->getState()) {
+                continue;
+            }
+
+            $results[] = $this->applyTo($subject, $timeout->getEvent());
+        }
+
+        return $results;
+    }
+
     public function getStateMachine(): StateMachine
     {
         return $this->stateMachine;
@@ -216,30 +307,85 @@ class StateMachineRunner
         $this->assertStateExists($currentState);
         $this->assertEventExists($event);
 
-        $name = $this->stateMachine->getName();
-
         if ($this->stateMachine->getTransitionsFor($currentState, $event) === []) {
             return new TransitionResult(TransitionStatus::NoTransition, $currentState);
         }
 
         $transition = $this->selectTransition($currentState, $event, $data);
         if ($transition === null) {
+            $name = $this->stateMachine->getName();
             $this->dispatcher->dispatch(new TransitionBlocked($name, $currentState, $event, $data, $subject));
 
             return new TransitionResult(TransitionStatus::Blocked, $currentState);
         }
 
-        $target = $transition->getTarget();
-        $this->dispatcher->dispatch(new BeforeTransition($name, $currentState, $event, $target, $data, $subject));
+        $state = $this->move($transition, $currentState, $event, $data, $subject);
+        $events = [$event];
 
-        $this->runEventCommand($event, $data);
+        // Events flagged onEnter fire by themselves as soon as their state is entered.
+        while (($auto = $this->selectOnEnter($state, $data)) !== null) {
+            if (count($events) > self::MAX_ON_ENTER_TRANSITIONS) {
+                throw OnEnterLoopException::afterTransitions(self::MAX_ON_ENTER_TRANSITIONS, $state);
+            }
+
+            [$autoEvent, $autoTransition] = $auto;
+            $state = $this->move($autoTransition, $state, $autoEvent, $data, $subject);
+            $events[] = $autoEvent;
+        }
+
+        if ($subject !== null) {
+            $this->scheduleTimeouts($subject);
+        }
+
+        return new TransitionResult(TransitionStatus::Moved, $state, $events);
+    }
+
+    /**
+     * Takes a transition: runs the commands, stores the new state and dispatches the events around it.
+     *
+     * @param array<mixed> $data
+     *
+     * @return string The target state
+     */
+    private function move(
+        Transition $transition,
+        string $source,
+        string $event,
+        array $data,
+        ?object $subject,
+    ): string {
+        $name = $this->stateMachine->getName();
+        $target = $transition->getTarget();
+        $this->dispatcher->dispatch(new BeforeTransition($name, $source, $event, $target, $data, $subject));
+
+        $this->runCommand($this->stateMachine->getEvent($event)?->getCommand(), $data);
+        $this->runCommand($transition->getCommand(), $data);
         if ($subject !== null) {
             $this->storage->write($subject, $target);
         }
 
-        $this->dispatcher->dispatch(new AfterTransition($name, $currentState, $event, $target, $data, $subject));
+        $this->dispatcher->dispatch(new AfterTransition($name, $source, $event, $target, $data, $subject));
 
-        return new TransitionResult(TransitionStatus::Moved, $target);
+        return $target;
+    }
+
+    /**
+     * The first onEnter event of the state with a transition whose condition passes.
+     *
+     * @param array<mixed> $data
+     *
+     * @return array{string, Transition}|null
+     */
+    private function selectOnEnter(string $state, array $data): ?array
+    {
+        foreach ($this->stateMachine->getOnEnterEvents($state) as $event) {
+            $transition = $this->selectTransition($state, $event->getName(), $data);
+            if ($transition !== null) {
+                return [$event->getName(), $transition];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -284,14 +430,10 @@ class StateMachineRunner
     }
 
     /**
-     * @param string $event
      * @param array<mixed> $data
-     *
-     * @return void
      */
-    private function runEventCommand(string $event, array $data): void
+    private function runCommand(?string $command, array $data): void
     {
-        $command = $this->stateMachine->getEvent($event)?->getCommand();
         if ($command !== null) {
             $this->commandResolver->resolve($command)->run($data);
         }

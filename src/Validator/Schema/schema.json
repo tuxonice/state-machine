@@ -48,6 +48,10 @@
           "condition": {
             "type": ["string", "null"],
             "description": "Optional condition for the transition"
+          },
+          "command": {
+            "type": ["string", "null"],
+            "description": "Optional command run when this transition is taken, after the event command"
           }
         },
         "required": ["source", "target", "event"],
@@ -75,7 +79,8 @@
           },
           "timeout": {
             "type": ["string", "null"],
-            "description": "Events can be triggered after a defined period of time has passed through a timeout"
+            "pattern": "^\\s*\\d+\\s*(second|minute|hour|day|week|month|year)s?\\s*$",
+            "description": "Events can be triggered after a defined period of time has passed through a timeout, e.g. 30 minutes"
           },
           "manual": {
             "type": ["boolean"],

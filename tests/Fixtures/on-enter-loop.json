@@ -1,0 +1,12 @@
+{
+  "name": "loop",
+  "states": [{"name": "A", "isCurrent": true}, {"name": "B"}],
+  "transitions": [
+    {"source": "A", "target": "B", "event": "ping"},
+    {"source": "B", "target": "A", "event": "pong"}
+  ],
+  "events": [
+    {"name": "ping", "onEnter": true},
+    {"name": "pong", "onEnter": true}
+  ]
+}
