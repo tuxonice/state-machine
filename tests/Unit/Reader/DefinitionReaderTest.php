@@ -38,7 +38,7 @@ class DefinitionReaderTest extends TestCase
                 'source' => 'New',
                 'target' => 'Created',
                 'event' => 'Create Order',
-                'condition' => 'Tlab\\StateMachine\\Conditions\\SampleCondition',
+                'condition' => 'Tlab\\Tests\\Support\\SampleCondition',
             ]),
             Transition::createFromArray([
                 'source' => 'Created',
@@ -110,7 +110,7 @@ class DefinitionReaderTest extends TestCase
         self::assertEquals([
             Event::createFromArray([
                 'name' => 'Create Order',
-                'command' => 'Tlab\\StateMachine\\Commands\\SampleCommand'
+                'command' => 'Tlab\\Tests\\Support\\SampleCommand'
             ]),
             Event::createFromArray([
                 'name' => 'Start Payment Process',

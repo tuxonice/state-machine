@@ -316,7 +316,33 @@ An unknown or duplicate name throws `MachineRegistryException`.
 
 ## Installation
 
-- TODO
+```bash
+composer require tlab/state-machine
+```
+
+Requires PHP 8.2 or later. It has no framework dependency, only `psr/container`, `psr/event-dispatcher` and a JSON
+schema validator.
+
+Diagrams are optional. To use the built-in Mermaid `Designer`, install its library too:
+
+```bash
+composer require jbzoo/mermaid-php
+```
+
+To draw diagrams with something else, implement `DiagramRenderer` and pass it to
+`generateHtmlDiagram($renderer)` or `generateMarkdownDiagram($renderer)`. Without the library and without a
+renderer, those methods throw `GraphRenderException`.
+
+Working examples are in [`examples/`](examples): two definitions and a script that draws a diagram
+(`php examples/diagram.php`).
+
+### Frameworks
+
+The package works in plain PHP. These recipes show how to wire it into a framework container, event dispatcher
+and ORM:
+
+- [Laravel](docs/integrations/laravel.md)
+- [Symfony](docs/integrations/symfony.md)
 
 ## Usage
 

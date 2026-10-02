@@ -2,75 +2,25 @@
 
 namespace Tlab\Tests\Flowchart;
 
-use Tlab\StateMachine\Exceptions\ValidationException;
+use Tlab\StateMachine\Flowchart\DiagramRenderer;
+use Tlab\StateMachine\Models\StateMachine;
+use Tlab\StateMachine\Reader\DefinitionReader;
+use Tlab\StateMachine\StateMachineRunner;
 use Tlab\StateMachine\Flowchart\Designer;
-use Tlab\StateMachine\Exceptions\GraphRenderException;
 use PHPUnit\Framework\TestCase;
 
 class DesignerTest extends TestCase
 {
     public function testFlowChartCanBeRenderer(): void
     {
-        $definitionJson = file_get_contents(dirname(__DIR__, 2) . '/Fixtures/sample.json');
+        $machine = (new DefinitionReader())->read(file_get_contents(dirname(__DIR__, 2) . '/Fixtures/sample.json'));
+        $designer = new Designer();
 
-        $expected = <<<'GRAPHCHART'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>JBZoo - Mermaid Graph</title>
-   <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"></script>
-<script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        window.mermaid = mermaid;
-        document.dispatchEvent(new Event('MermaidLoaded'));
-</script>
-</head>
-<body>
-<h1>State machine name</h1><hr>
-    <div class="mermaid" style="margin-top:20px;">graph TB;
-    New(("New"));
-    Created("Created");
-    PendingPayment("PendingPayment");
-    CheckPayment{"CheckPayment"};
-    Cancelled(("Cancelled"));
-    PaymentAuthorized("PaymentAuthorized");
-    PaymentFailed("PaymentFailed");
-    PreparingShipment("PreparingShipment");
-    ShipmentReady("ShipmentReady");
-    Invoicing("Invoicing");
-    Shipped("Shipped");
-    Delivered("Delivered");
-    Completed(("Completed"));
+        $html = $designer->renderHtml($machine);
 
-    New-->|"evt:Create Order
-cond:Tlab\StateMachine\Conditions\SampleCondition
-cmd:Tlab\StateMachine\Commands\SampleCommand"|Created;
-    Created-->|"evt:Start Payment Process"|PendingPayment;
-    PendingPayment-->|"evt:Check Payment Status"|CheckPayment;
-    CheckPayment-->|"evt:Payment OK"|PaymentAuthorized;
-    CheckPayment-->|"evt:Payment Not OK"|PaymentFailed;
-    PaymentFailed-->|"evt:Order Cancelled"|Cancelled;
-    PaymentAuthorized-->|"evt:Start Shipment Preparation"|PreparingShipment;
-    PreparingShipment-->|"evt:Shipment Prepared"|ShipmentReady;
-    ShipmentReady-->|"evt:Generate Invoice"|Invoicing;
-    Invoicing-->|"evt:Shipment Dispatched"|Shipped;
-    Shipped-->|"evt:Shipment Delivered"|Delivered;
-    Delivered-->|"evt:Complete Order"|Completed;
-</div>
-
-
-<script>
-                $(document).on("click", "path", e => {
-                    e.currentTarget.style.stroke = e.currentTarget.style.stroke ? "" : "red";
-                });
-            </script>
-</body>
-</html>
-GRAPHCHART;
-
-        $draw = new Designer();
-        self::assertEquals($expected, $draw->renderGraph($definitionJson));
+        // The page around the graph belongs to the library and changes between its versions
+        self::assertStringContainsString('<h1>State machine name</h1>', $html);
+        self::assertStringContainsString(trim($designer->renderMarkdown($machine)), $html);
     }
 
     public function testMarkdownCanBeRenderer(): void
@@ -95,8 +45,8 @@ graph TB;
     Completed(("Completed"));
 
     New-->|"evt:Create Order
-cond:Tlab\StateMachine\Conditions\SampleCondition
-cmd:Tlab\StateMachine\Commands\SampleCommand"|Created;
+cond:Tlab\Tests\Support\SampleCondition
+cmd:Tlab\Tests\Support\SampleCommand"|Created;
     Created-->|"evt:Start Payment Process"|PendingPayment;
     PendingPayment-->|"evt:Check Payment Status"|CheckPayment;
     CheckPayment-->|"evt:Payment OK"|PaymentAuthorized;
@@ -112,42 +62,33 @@ cmd:Tlab\StateMachine\Commands\SampleCommand"|Created;
 GRAPHCHART;
 
         $draw = new Designer();
-        self::assertEquals($expected, $draw->renderMarkdown($definitionJson));
+        self::assertEquals($expected, $draw->renderMarkdown((new DefinitionReader())->read($definitionJson)));
     }
 
-    public function testShouldThrowExceptionOnEmptyJson(): void
+    public function testRendersTheSameMachineTwiceWithoutAccumulating(): void
     {
+        $machine = (new DefinitionReader())->read(file_get_contents(dirname(__DIR__, 2) . '/Fixtures/minimal.json'));
         $designer = new Designer();
 
-        $this->expectException(GraphRenderException::class);
-        $this->expectExceptionMessage('JSON definition cannot be empty');
-
-        $designer->renderGraph('');
+        self::assertSame($designer->renderMarkdown($machine), $designer->renderMarkdown($machine));
     }
 
-    public function testShouldThrowExceptionOnInvalidJson(): void
+    public function testRunnerUsesAGivenRenderer(): void
     {
-        $designer = new Designer();
+        $runner = StateMachineRunner::fromJson(file_get_contents(dirname(__DIR__, 2) . '/Fixtures/minimal.json'));
+        $renderer = new class implements DiagramRenderer {
+            public function renderHtml(StateMachine $machine): string
+            {
+                return '<html>' . $machine->getName();
+            }
 
-        $this->expectException(GraphRenderException::class);
-        $this->expectExceptionMessage('Syntax error');
+            public function renderMarkdown(StateMachine $machine): string
+            {
+                return '# ' . $machine->getName();
+            }
+        };
 
-        $designer->renderGraph('{invalid json}');
-    }
-
-    public function testShouldThrowExceptionOnMissingStates(): void
-    {
-        $designer = new Designer();
-        $json = json_encode([
-            'name' => 'Test Machine',
-            'states' => [],
-            'transitions' => [],
-            'events' => [],
-        ]);
-
-        $this->expectException(GraphRenderException::class);
-        $this->expectExceptionMessage('Invalid state machine definition - /states:');
-
-        $designer->renderGraph($json);
+        self::assertStringStartsWith('<html>', $runner->generateHtmlDiagram($renderer));
+        self::assertStringStartsWith('# ', $runner->generateMarkdownDiagram($renderer));
     }
 }

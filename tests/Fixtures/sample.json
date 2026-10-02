@@ -49,7 +49,7 @@
       "source": "New",
       "target": "Created",
       "event": "Create Order",
-      "condition": "Tlab\\StateMachine\\Conditions\\SampleCondition"
+      "condition": "Tlab\\Tests\\Support\\SampleCondition"
     },
     {
       "source": "Created",
@@ -121,7 +121,7 @@
   "events": [
     {
       "name": "Create Order",
-      "command": "Tlab\\StateMachine\\Commands\\SampleCommand"
+      "command": "Tlab\\Tests\\Support\\SampleCommand"
     },
     {
       "name": "Start Payment Process",

@@ -9,18 +9,51 @@ on:
     branches: [ main ]
 
 jobs:
-  Tests:
+  Quality:
     runs-on: ubuntu-latest
     steps:
       - uses: shivammathur/setup-php@a36e1e52ff4a1c9e9c9be31551ee4712a6cb6bd0
         with:
-          php-version: '8.2'
+          php-version: '8.4'
       - uses: actions/checkout@v4
+      - name: Validate composer.json
+        run: composer validate --strict
       - name: Install Dependencies
         run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
       - name: Run Code style
         run: vendor/bin/phpcs
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse
+        run: vendor/bin/phpstan analyse --no-progress
+
+  Tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+        dependencies: [highest, lowest]
+    name: Tests (PHP ${{ matrix.php }}, ${{ matrix.dependencies }})
+    steps:
+      - uses: shivammathur/setup-php@a36e1e52ff4a1c9e9c9be31551ee4712a6cb6bd0
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: ${{ matrix.php == '8.4' && matrix.dependencies == 'highest' && 'pcov' || 'none' }}
+      - uses: actions/checkout@v4
+      - name: Install highest Dependencies
+        if: matrix.dependencies == 'highest'
+        run: composer update --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      - name: Install lowest Dependencies
+        if: matrix.dependencies == 'lowest'
+        run: composer update --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --prefer-lowest --prefer-stable
       - name: Execute Unit tests
+        if: ${{ !(matrix.php == '8.4' && matrix.dependencies == 'highest') }}
         run: vendor/bin/phpunit --testdox
+      - name: Execute Unit tests with coverage
+        if: ${{ matrix.php == '8.4' && matrix.dependencies == 'highest' }}
+        run: vendor/bin/phpunit --testdox --coverage-text --coverage-clover coverage.xml
+      - name: Upload coverage report
+        if: ${{ matrix.php == '8.4' && matrix.dependencies == 'highest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml

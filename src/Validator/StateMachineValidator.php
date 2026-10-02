@@ -44,7 +44,7 @@ class StateMachineValidator
         $error = $result->error();
         $formatter = new ErrorFormatter();
 
-        $errors = $formatter->format($error, false);
+        $errors = $error === null ? [] : $formatter->format($error, false);
 
         return false;
     }

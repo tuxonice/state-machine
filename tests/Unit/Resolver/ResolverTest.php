@@ -3,7 +3,7 @@
 namespace Tlab\Tests\Resolver;
 
 use PHPUnit\Framework\TestCase;
-use Tlab\StateMachine\Commands\SampleCommand;
+use Tlab\Tests\Support\SampleCommand;
 use Tlab\StateMachine\Exceptions\ResolutionException;
 use Tlab\StateMachine\Resolver\CommandResolver;
 use Tlab\StateMachine\Resolver\ConditionResolver;
