@@ -1,0 +1,26 @@
+{
+  "name": "advanced",
+  "states": [
+    {"name": "New", "isCurrent": true},
+    {"name": "Paid"},
+    {"name": "Shipped"},
+    {"name": "Cancelled"},
+    {"name": "Review"},
+    {"name": "Done"}
+  ],
+  "transitions": [
+    {"source": "New", "target": "Paid", "event": "pay", "command": "Tlab\\Tests\\Support\\LogCommand"},
+    {"source": "New", "target": "Cancelled", "event": "cancel"},
+    {"source": "New", "target": "Cancelled", "event": "expire"},
+    {"source": "Paid", "target": "Review", "event": "check", "condition": "Tlab\\Tests\\FalseCondition"},
+    {"source": "Paid", "target": "Shipped", "event": "check"},
+    {"source": "Shipped", "target": "Done", "event": "complete"}
+  ],
+  "events": [
+    {"name": "pay", "command": "Tlab\\Tests\\Support\\LogCommand"},
+    {"name": "cancel", "manual": true},
+    {"name": "expire", "timeout": "2 days"},
+    {"name": "check", "onEnter": true},
+    {"name": "complete", "manual": true, "timeout": "1 hour"}
+  ]
+}

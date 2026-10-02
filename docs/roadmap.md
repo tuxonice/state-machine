@@ -21,7 +21,7 @@ main
 |-------|--------|--------|
 | 1. Make what exists correct | `sm-8-phase-1-core-correctness` | Done |
 | 2. Framework-agnostic core | `sm-8-phase-2-framework-agnostic-core` | Done |
-| 3. Advanced workflow features | `sm-8-phase-3-advanced-features` | Not started |
+| 3. Advanced workflow features | `sm-8-phase-3-advanced-features` | Done, except sub-processes |
 | 4. Adoption | `sm-8-phase-4-adoption` | Not started |
 
 Rules for every phase:
@@ -91,12 +91,20 @@ Decisions and differences from the plan:
 
 Branch: `sm-8-phase-3-advanced-features`
 
-- [ ] `onEnter` auto-triggering.
-- [ ] `manual` flag exposed through `availableManualEvents()`.
-- [ ] `timeout` through a `TimeoutScheduler` interface and a `processTimeouts()` entry point that cron or a queue worker can call.
-- [ ] Registry for multiple named machines.
-- [ ] Commands attachable to the transition as well as to the event (finding 6).
-- [ ] Optional sub-process support.
+- [x] `onEnter` auto-triggering.
+- [x] `manual` flag exposed through `availableManualEvents()`.
+- [x] `timeout` through a `TimeoutScheduler` interface and a `processTimeouts()` entry point that cron or a queue worker can call.
+- [x] Registry for multiple named machines.
+- [x] Commands attachable to the transition as well as to the event (finding 6).
+- [ ] Optional sub-process support. Deferred: it needs a design for how a sub machine reports completion, and nothing else depends on it.
+
+Decisions:
+- onEnter events are applied after the triggering transition, with the same data. They are tried in event definition order and the first whose condition passes wins. A failing condition is not an error, the subject stays in the state. A chain is capped at 50 steps, then `OnEnterLoopException` is thrown.
+- A transition's command runs after the event's command. Both run only when the transition is taken.
+- Timeouts are a number plus a unit (`30 minutes`), enforced by the schema. They are scheduled for subjects only (`applyTo()`), and only for the state a chain ends in. A timeout whose conditions fail is dropped, not retried.
+- `TimeoutScheduler` has three methods (`schedule()`, `cancel()`, `pullDue()`). Persistent implementations are left to the application, `InMemoryTimeoutScheduler` ships for tests.
+- `TransitionResult::getEvents()` lists the requested event followed by the onEnter events it triggered.
+- `StateMachineRunner` takes `scheduler` as a new last optional argument, so nothing breaks.
 
 ## Phase 4: Adoption
 

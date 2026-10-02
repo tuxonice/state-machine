@@ -147,11 +147,12 @@ Events are the triggers that cause state transitions. Each event has a name and 
 |-----------|-----------------------------------------------------------------------------------|
 | `name`    | Required. Referenced by the `event` of transitions.                               |
 | `command` | Optional class implementing `CommandInterface`, run when the transition is taken. |
-| `manual`  | Optional. The event is meant to be triggered manually.                            |
-| `onEnter` | Optional. The event is meant to be triggered automatically on entering a state.   |
-| `timeout` | Optional. The event is meant to be triggered after a period of time.              |
+| `manual`  | Optional. The event is triggered by a person, see `availableManualEvents()`.      |
+| `onEnter` | Optional. The event is applied automatically on entering a state it leaves.       |
+| `timeout` | Optional. The event is applied automatically after a period of time.              |
 
-> `manual`, `onEnter` and `timeout` are part of the definition format and are validated and preserved, but the runner does not act on them yet.
+`timeout` is a number and a unit (`second`, `minute`, `hour`, `day`, `week`, `month` or `year`, plural allowed),
+for example `"30 minutes"`. See [Advanced features](#advanced-features).
 
 ## Running the state machine
 
@@ -254,6 +255,64 @@ Nothing is dispatched by default.
 
 Each event carries `machineName`, `source`, `event`, `data` and `subject` (`null` unless `applyTo()` was used),
 and `BeforeTransition` and `AfterTransition` also carry `target`.
+
+## Advanced features
+
+### Commands on transitions
+
+A command can also be attached to a transition, so the same event can do different things from different states.
+When a transition is taken, the event command runs first, then the transition command.
+
+```json
+{ "source": "New", "target": "Paid", "event": "pay", "command": "App\\Commands\\CapturePayment" }
+```
+
+### onEnter events
+
+An event flagged `onEnter` is applied by itself as soon as a subject enters a state it leaves, provided a
+transition's condition passes (else-branches work as usual). If its conditions do not pass, the subject stays in the
+state. Chains are followed, and the events applied are available from `TransitionResult::getEvents()`.
+A cycle of onEnter events throws `OnEnterLoopException` after `StateMachineRunner::MAX_ON_ENTER_TRANSITIONS` steps.
+
+### Manual events
+
+`availableManualEvents($state)` and `availableManualEventsFor($subject)` list the `manual` events that leave a
+state, which is what a UI would offer as buttons. Conditions are not evaluated, use `can()`.
+
+### Timeouts
+
+The runner does not run timers. It records what is due in a `TimeoutScheduler`, and you call `processTimeouts()`
+from cron or a queue worker.
+
+```php
+use Tlab\StateMachine\Scheduler\InMemoryTimeoutScheduler;
+
+$runner = new StateMachineRunner($machine, scheduler: new InMemoryTimeoutScheduler());
+
+$runner->applyTo($order, 'create');  // entering a state schedules its timeout events
+$runner->scheduleTimeouts($order);   // for a subject that has not moved yet, e.g. in its initial state
+
+$runner->processTimeouts();          // applies every event that is due, returns the TransitionResults
+```
+
+Moving a subject cancels the timeouts of the state it left. A due timeout is skipped when its subject is no longer in
+the state it was scheduled for, and dropped without a retry when its conditions do not pass.
+`InMemoryTimeoutScheduler` is meant for tests; implement `TimeoutScheduler` on top of a database or queue
+for real use. Timeouts are ignored by default.
+
+### Several machines
+
+```php
+use Tlab\StateMachine\Registry\StateMachineRegistry;
+
+$registry = (new StateMachineRegistry())
+    ->register($orderRunner)                  // named after its definition
+    ->register($paymentRunner, 'payment');
+
+$registry->get('payment')->applyTo($payment, 'authorize');
+```
+
+An unknown or duplicate name throws `MachineRegistryException`.
 
 ## Installation
 

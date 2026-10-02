@@ -6,7 +6,10 @@ namespace Tlab\StateMachine;
 
 class TransitionResult
 {
-    public function __construct(private TransitionStatus $status, private string $state)
+    /**
+     * @param string[] $events Events applied, the requested one first, then any onEnter ones
+     */
+    public function __construct(private TransitionStatus $status, private string $state, private array $events = [])
     {
     }
 
@@ -21,6 +24,16 @@ class TransitionResult
     public function getState(): string
     {
         return $this->state;
+    }
+
+    /**
+     * Events applied in order: the requested one, then the onEnter events it triggered.
+     *
+     * @return string[]
+     */
+    public function getEvents(): array
+    {
+        return $this->events;
     }
 
     public function hasMoved(): bool

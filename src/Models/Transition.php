@@ -14,6 +14,7 @@ class Transition
 
     private ?string $condition;
 
+    private ?string $command;
 
     /**
      * @param array<string,mixed> $transitionData
@@ -34,6 +35,7 @@ class Transition
         $this->target = $transitionData['target'];
         $this->event = $transitionData['event'];
         $this->condition = $transitionData['condition'] ?? null;
+        $this->command = $transitionData['command'] ?? null;
     }
 
     public function getSource(): string
@@ -54,5 +56,10 @@ class Transition
     public function getCondition(): ?string
     {
         return $this->condition;
+    }
+
+    public function getCommand(): ?string
+    {
+        return $this->command;
     }
 }
