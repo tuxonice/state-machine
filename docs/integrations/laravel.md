@@ -102,7 +102,9 @@ $dispatcher = new class ($app['events']) implements \Psr\EventDispatcher\EventDi
 
 ## Timeouts
 
-Implement `TimeoutScheduler` on a table and call `processTimeouts()` from a scheduled command:
+Implement `AcknowledgingTimeoutScheduler` on a table (lease the rows `claimDue()` returns, delete them in
+`acknowledge()`) and call `processTimeouts()` from a scheduled command. It throws a `TimeoutProcessingException`
+after the batch when some timeouts failed; those stay in the table and are claimed again on a later run.
 
 ```php
 $schedule->call(fn () => app(StateMachineRegistry::class)->get('order')->processTimeouts())->everyMinute();

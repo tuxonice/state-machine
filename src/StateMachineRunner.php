@@ -10,7 +10,9 @@ use Tlab\StateMachine\Events\AfterTransition;
 use Tlab\StateMachine\Events\BeforeTransition;
 use Tlab\StateMachine\Events\NullEventDispatcher;
 use Tlab\StateMachine\Events\TransitionBlocked;
+use Throwable;
 use Tlab\StateMachine\Exceptions\OnEnterLoopException;
+use Tlab\StateMachine\Exceptions\TimeoutProcessingException;
 use Tlab\StateMachine\Exceptions\UnknownEventException;
 use Tlab\StateMachine\Exceptions\UnknownStateException;
 use Tlab\StateMachine\Exceptions\GraphRenderException;
@@ -24,6 +26,8 @@ use Tlab\StateMachine\Resolver\CommandResolver;
 use Tlab\StateMachine\Resolver\CommandResolverInterface;
 use Tlab\StateMachine\Resolver\ConditionResolver;
 use Tlab\StateMachine\Resolver\ConditionResolverInterface;
+use Tlab\StateMachine\Scheduler\AcknowledgingTimeoutScheduler;
+use Tlab\StateMachine\Scheduler\FailedTimeout;
 use Tlab\StateMachine\Scheduler\NullTimeoutScheduler;
 use Tlab\StateMachine\Scheduler\TimeoutParser;
 use Tlab\StateMachine\Scheduler\TimeoutScheduler;
@@ -260,14 +264,30 @@ class StateMachineRunner
      */
     public function processTimeouts(?DateTimeImmutable $now = null): array
     {
-        $results = [];
-        foreach ($this->scheduler->pullDue($now ?? new DateTimeImmutable()) as $timeout) {
-            $subject = $timeout->getSubject();
-            if ($this->storage->read($subject) !== $timeout->getState()) {
-                continue;
-            }
+        $now ??= new DateTimeImmutable();
+        $scheduler = $this->scheduler;
+        $acknowledging = $scheduler instanceof AcknowledgingTimeoutScheduler;
 
-            $results[] = $this->applyTo($subject, $timeout->getEvent());
+        $results = [];
+        $failures = [];
+        foreach ($acknowledging ? $scheduler->claimDue($now) : $scheduler->pullDue($now) as $timeout) {
+            try {
+                $subject = $timeout->getSubject();
+                if ($this->storage->read($subject) === $timeout->getState()) {
+                    $results[] = $this->applyTo($subject, $timeout->getEvent());
+                }
+
+                // Applied, blocked by its conditions or obsolete: either way it is done with.
+                if ($acknowledging) {
+                    $scheduler->acknowledge($timeout);
+                }
+            } catch (Throwable $error) {
+                $failures[] = new FailedTimeout($timeout, $error);
+            }
+        }
+
+        if ($failures !== []) {
+            throw TimeoutProcessingException::withFailures($results, $failures);
         }
 
         return $results;
@@ -335,15 +355,12 @@ class StateMachineRunner
             $events[] = $autoEvent;
         }
 
-        if ($subject !== null) {
-            $this->scheduleTimeouts($subject);
-        }
-
         return new TransitionResult(TransitionStatus::Moved, $state, $events);
     }
 
     /**
-     * Takes a transition: runs the commands, stores the new state and dispatches the events around it.
+     * Takes a transition: runs the commands, stores the new state, schedules its timeouts and dispatches
+     * the events around it.
      *
      * @param array<mixed> $data
      *
@@ -364,6 +381,8 @@ class StateMachineRunner
         $this->runCommand($transition->getCommand(), $data);
         if ($subject !== null) {
             $this->storage->write($subject, $target);
+            // Right after the write, so the stored state always has its own timeouts, even when a listener fails.
+            $this->scheduleTimeouts($subject);
         }
 
         $this->dispatcher->dispatch(new AfterTransition($name, $source, $event, $target, $data, $subject));
