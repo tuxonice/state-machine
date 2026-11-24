@@ -196,6 +196,7 @@ Every exception thrown by the package extends `StateMachineException`.
 | `UnknownStateException`  | A state does not exist, or a subject has no state and there is no initial state.     |
 | `UnknownEventException`  | An event does not exist.                                                             |
 | `ResolutionException`    | A condition or command class does not exist or does not implement its interface.     |
+| `TimeoutProcessingException` | `processTimeouts()` tried every due timeout and some failed. `getResults()` and `getFailures()` tell which. |
 
 ### Stateful subjects
 
@@ -295,10 +296,22 @@ $runner->scheduleTimeouts($order);   // for a subject that has not moved yet, e.
 $runner->processTimeouts();          // applies every event that is due, returns the TransitionResults
 ```
 
-Moving a subject cancels the timeouts of the state it left. A due timeout is skipped when its subject is no longer in
-the state it was scheduled for, and dropped without a retry when its conditions do not pass.
-`InMemoryTimeoutScheduler` is meant for tests; implement `TimeoutScheduler` on top of a database or queue
-for real use. Timeouts are ignored by default.
+Moving a subject cancels the timeouts of the state it left and schedules those of the state it entered, right after
+the new state is stored, so a failing `AfterTransition` listener cannot leave a subject without its timeouts.
+A due timeout is skipped when its subject is no longer in the state it was scheduled for, and dropped without a retry
+when its conditions do not pass.
+
+When applying a timeout fails, `processTimeouts()` still tries the other due timeouts, then throws a
+`TimeoutProcessingException` with the results of those applied (`getResults()`) and the ones that failed
+(`getFailures()`, each with its `ScheduledTimeout` and the error).
+
+Implement `TimeoutScheduler` on top of a database or queue for real use. Prefer `AcknowledgingTimeoutScheduler`:
+`processTimeouts()` then claims due timeouts with `claimDue()` and removes each one with `acknowledge()` only once it
+has been dealt with, so a timeout is not lost when applying it fails or the worker dies half-way; the next run
+claims it again. A scheduler that only has `pullDue()` loses a timeout whose processing fails, and the
+exception is the only trace of it. With several workers, `claimDue()` should lease what it returns, so two workers
+do not claim the same timeout. `InMemoryTimeoutScheduler` acknowledges and is meant for tests. Timeouts are ignored
+by default.
 
 ### Several machines
 

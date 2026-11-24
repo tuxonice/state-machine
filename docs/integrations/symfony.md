@@ -47,7 +47,9 @@ afterwards, or pass a `StateStorageInterface` that persists on write.
 
 ## Timeouts
 
-Implement `TimeoutScheduler` on a table or on Messenger's delayed messages, and call `processTimeouts()` from a
-console command run by cron, or from a scheduled message in the Scheduler component.
+Implement `AcknowledgingTimeoutScheduler` (or at least `TimeoutScheduler`) on a table or on Messenger's delayed
+messages, and call `processTimeouts()` from a console command run by cron, or from a scheduled message in the
+Scheduler component. With `AcknowledgingTimeoutScheduler`, a timeout that fails is claimed again on a later run
+instead of being lost.
 
 > This recipe is documentation only. It has not been run in a Symfony application.

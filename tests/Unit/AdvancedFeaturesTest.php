@@ -4,6 +4,7 @@ namespace Tlab\Tests;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Tlab\StateMachine\Exceptions\MachineRegistryException;
 use Tlab\StateMachine\Exceptions\OnEnterLoopException;
 use Tlab\StateMachine\Exceptions\ValidationException;
@@ -15,6 +16,7 @@ use Tlab\StateMachine\StateMachineRunner;
 use Tlab\StateMachine\TransitionStatus;
 use Tlab\Tests\Support\LogCommand;
 use Tlab\Tests\Support\Order;
+use Tlab\Tests\Support\ThrowingDispatcher;
 
 class AdvancedFeaturesTest extends TestCase
 {
@@ -117,6 +119,49 @@ class AdvancedFeaturesTest extends TestCase
         $this->assertSame('complete', $scheduled[0]->getEvent());
         $this->assertSame('Shipped', $scheduled[0]->getState());
         $this->assertSame($order, $scheduled[0]->getSubject());
+    }
+
+    public function testTimeoutsOfTheNewStateAreScheduledEvenWhenAnAfterTransitionListenerFails(): void
+    {
+        $runner = StateMachineRunner::fromJson(
+            $this->fixture('advanced.json'),
+            dispatcher: new ThrowingDispatcher('Shipped'),
+            scheduler: $this->scheduler,
+        );
+        $order = new Order('Paid');
+
+        try {
+            $runner->applyTo($order, 'check'); // Paid -> Shipped, which has the "complete" timeout
+            $this->fail('the listener exception should reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('listener failed after entering Shipped', $e->getMessage());
+        }
+
+        $this->assertSame('Shipped', $order->getState());
+        $scheduled = $this->scheduler->all();
+        $this->assertCount(1, $scheduled);
+        $this->assertSame('complete', $scheduled[0]->getEvent());
+        $this->assertSame('Shipped', $scheduled[0]->getState());
+    }
+
+    public function testTimeoutsOfTheLeftStateAreCancelledEvenWhenAnAfterTransitionListenerFails(): void
+    {
+        $runner = StateMachineRunner::fromJson(
+            $this->fixture('advanced.json'),
+            dispatcher: new ThrowingDispatcher('Cancelled'),
+            scheduler: $this->scheduler,
+        );
+        $order = new Order('New');
+        $runner->scheduleTimeouts($order, new DateTimeImmutable('2026-01-01')); // New has the "expire" timeout
+
+        try {
+            $runner->applyTo($order, 'cancel');
+            $this->fail('the listener exception should reach the caller');
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame('Cancelled', $order->getState());
+        $this->assertSame([], $this->scheduler->all());
     }
 
     public function testProcessTimeoutsAppliesDueEventsOnly(): void
