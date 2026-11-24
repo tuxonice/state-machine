@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tlab\StateMachine\Resolver;
 
 use Psr\Container\ContainerInterface;
+use ReflectionClass;
 use Tlab\StateMachine\Exceptions\ResolutionException;
 
 /**
@@ -32,6 +33,9 @@ abstract class AbstractResolver
         if ($this->container !== null && $this->container->has($class)) {
             $instance = $this->container->get($class);
         } elseif (class_exists($class)) {
+            if ((new ReflectionClass($class))->getConstructor()?->getNumberOfRequiredParameters() > 0) {
+                throw ResolutionException::needsConstructorArguments($class);
+            }
             $instance = new $class();
         } else {
             throw ResolutionException::classNotFound($class);

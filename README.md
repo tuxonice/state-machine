@@ -195,7 +195,7 @@ Every exception thrown by the package extends `StateMachineException`.
 | `ValidationException`    | The definition is invalid. `getErrors()` returns the schema errors.                  |
 | `UnknownStateException`  | A state does not exist, or a subject has no state and there is no initial state.     |
 | `UnknownEventException`  | An event does not exist.                                                             |
-| `ResolutionException`    | A condition or command class does not exist or does not implement its interface.     |
+| `ResolutionException`    | A condition or command class does not exist, does not implement its interface, or needs constructor arguments and is not in the container. From `validateClasses()`, `getErrors()` lists every such class. |
 | `TimeoutProcessingException` | `processTimeouts()` tried every due timeout and some failed. `getResults()` and `getFailures()` tell which. |
 
 ### Stateful subjects
@@ -228,7 +228,8 @@ To persist state somewhere else (a repository, a cache, a plain object), pass yo
 
 By default conditions and commands are created with `new` and no arguments. Pass a PSR-11 container to
 have them built by your framework instead, so they can receive their dependencies. Classes the
-container does not know are still instantiated directly.
+container does not know are still instantiated directly; one whose constructor needs arguments then throws a
+`ResolutionException` asking you to register it in the container.
 
 ```php
 use Tlab\StateMachine\Resolver\CommandResolver;
@@ -242,6 +243,15 @@ $runner = new StateMachineRunner(
 ```
 
 To resolve them some other way, implement `ConditionResolverInterface` and `CommandResolverInterface`.
+
+A definition only names classes, so a typo or a missing container entry would otherwise surface the first time
+that transition is taken. `validateClasses()` resolves every condition and command the definition references,
+through the same resolvers, without evaluating or running them, and throws one `ResolutionException` listing
+every class that cannot be resolved (`getErrors()`: class => reason). Call it at boot or from a test in CI:
+
+```php
+$runner->validateClasses();
+```
 
 ### Events
 
