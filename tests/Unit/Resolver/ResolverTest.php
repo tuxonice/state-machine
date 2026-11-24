@@ -58,6 +58,17 @@ class ResolverTest extends TestCase
         $resolver->resolve(NotACondition::class);
     }
 
+    public function testAClassThatNeedsConstructorArgumentsAndIsNotInTheContainerThrows(): void
+    {
+        $resolver = new ConditionResolver(new ArrayContainer([]));
+
+        $this->expectException(ResolutionException::class);
+        $this->expectExceptionMessage(
+            "Class '" . ConfigurableCondition::class . "' needs constructor arguments; register it in the container"
+        );
+        $resolver->resolve(ConfigurableCondition::class);
+    }
+
     public function testCommandIsInstantiatedWithoutContainer(): void
     {
         self::assertInstanceOf(SampleCommand::class, (new CommandResolver())->resolve(SampleCommand::class));

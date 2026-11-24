@@ -12,6 +12,7 @@ use Tlab\StateMachine\Events\NullEventDispatcher;
 use Tlab\StateMachine\Events\TransitionBlocked;
 use Throwable;
 use Tlab\StateMachine\Exceptions\OnEnterLoopException;
+use Tlab\StateMachine\Exceptions\ResolutionException;
 use Tlab\StateMachine\Exceptions\TimeoutProcessingException;
 use Tlab\StateMachine\Exceptions\UnknownEventException;
 use Tlab\StateMachine\Exceptions\UnknownStateException;
@@ -291,6 +292,42 @@ class StateMachineRunner
         }
 
         return $results;
+    }
+
+    /**
+     * Resolves every condition and command the definition references, through the same resolvers (and
+     * container) used at run time, so a missing class, a wrong type or a missing container entry shows up now
+     * instead of when the transition is first taken. Conditions are not evaluated and commands are not run.
+     *
+     * Call it at boot or from a test in CI.
+     *
+     * @throws ResolutionException listing every class that cannot be resolved, see getErrors()
+     */
+    public function validateClasses(): void
+    {
+        $errors = [];
+        $check = function (?string $class, callable $resolve) use (&$errors): void {
+            if ($class === null || isset($errors[$class])) {
+                return;
+            }
+            try {
+                $resolve($class);
+            } catch (ResolutionException $e) {
+                $errors[$class] = $e->getMessage();
+            }
+        };
+
+        foreach ($this->stateMachine->getTransitions() as $transition) {
+            $check($transition->getCondition(), fn(string $class) => $this->conditionResolver->resolve($class));
+            $check($transition->getCommand(), fn(string $class) => $this->commandResolver->resolve($class));
+        }
+        foreach ($this->stateMachine->getEvents() as $event) {
+            $check($event->getCommand(), fn(string $class) => $this->commandResolver->resolve($class));
+        }
+
+        if ($errors !== []) {
+            throw ResolutionException::forDefinition($this->stateMachine->getName(), $errors);
+        }
     }
 
     public function getStateMachine(): StateMachine
