@@ -83,7 +83,7 @@ Branch: `sm-8-phase-2-framework-agnostic-core`
 Decisions and differences from the plan:
 - There is no separate `DefinitionLoader` class: adding `readArray()` and `readFile()` to `DefinitionReader` avoided two classes doing the same job.
 - `StateStorageInterface` reads and writes the state of a *subject object* (`read(object)`, `write(object, string)`), so it can back any object. `StatefulInterface` is the zero-config path, where the subject keeps its own state.
-- `availableEvents()` ignores conditions, because they need data. Use `can()` to evaluate them.
+- `availableEvents()` ignores conditions, because they need data. `allowedEvents()`, `allowedEventsFor()`, `allowedManualEvents()` and `allowedManualEventsFor()` take the data and evaluate them; `can()` checks a single event.
 - Breaking changes, acceptable before the first release: `new StateMachineRunner($json)` is now `StateMachineRunner::fromJson($json)`, `StateMachine` and `State` have no setters, `Transition::checkCondition()` is gone (the runner evaluates conditions through the resolver), and `GraphRenderException` no longer extends `RuntimeException`.
 - `psr/container` and `psr/event-dispatcher` are new requirements.
 

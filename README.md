@@ -308,7 +308,20 @@ A cycle of onEnter events throws `OnEnterLoopException` after `StateMachineRunne
 ### Manual events
 
 `availableManualEvents($state)` and `availableManualEventsFor($subject)` list the `manual` events that leave a
-state, which is what a UI would offer as buttons. Conditions are not evaluated, use `can()`.
+state, without evaluating conditions. To offer only what would succeed right now, use the `allowed*` variants: they
+keep an event when one of its transitions from the state has no condition or a condition that passes, evaluated with
+the data you pass (and the subject, for the `*For` ones). They call the conditions, so conditions should only read.
+
+```php
+$buttons = $runner->allowedManualEventsFor($order, ['actor' => $currentUser]);
+```
+
+| Conditions ignored                  | Conditions evaluated                        |
+|-------------------------------------|---------------------------------------------|
+| `availableEvents($state)`           | `allowedEvents($state, $data)`              |
+| `availableEventsFor($subject)`      | `allowedEventsFor($subject, $data)`         |
+| `availableManualEvents($state)`     | `allowedManualEvents($state, $data)`        |
+| `availableManualEventsFor($subject)`| `allowedManualEventsFor($subject, $data)`   |
 
 ### Timeouts
 

@@ -247,6 +247,63 @@ class StateMachineRunner
     }
 
     /**
+     * Events that can be applied in the state right now: those with a transition whose condition passes (or
+     * that has none). Unlike availableEvents(), conditions are evaluated, with the given data and no subject.
+     *
+     * @param array<mixed> $data
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function allowedEvents(string $state, array $data = []): array
+    {
+        return $this->allowedAmong($state, $this->availableEvents($state), $data, null);
+    }
+
+    /**
+     * Like allowedEvents(), for the subject's state, with the subject passed to the conditions.
+     *
+     * @param array<mixed> $data
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function allowedEventsFor(object $subject, array $data = []): array
+    {
+        $state = $this->stateOf($subject);
+
+        return $this->allowedAmong($state, $this->availableEvents($state), $data, $subject);
+    }
+
+    /**
+     * The manual events that can be applied in the state right now, which is what a UI would offer as buttons.
+     *
+     * @param array<mixed> $data
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function allowedManualEvents(string $state, array $data = []): array
+    {
+        return $this->allowedAmong($state, $this->availableManualEvents($state), $data, null);
+    }
+
+    /**
+     * Like allowedManualEvents(), for the subject's state, with the subject passed to the conditions.
+     *
+     * @param array<mixed> $data
+     *
+     * @return string[]
+     * @throws UnknownStateException
+     */
+    public function allowedManualEventsFor(object $subject, array $data = []): array
+    {
+        $state = $this->stateOf($subject);
+
+        return $this->allowedAmong($state, $this->availableManualEvents($state), $data, $subject);
+    }
+
+    /**
      * Schedules the timeout events of the subject's current state, replacing what was scheduled before.
      *
      * This happens by itself whenever applyTo() moves the subject. Call it for subjects that have not
@@ -485,6 +542,22 @@ class StateMachineRunner
         }
 
         return null;
+    }
+
+    /**
+     * The events of the list that have a transition from the state whose condition passes.
+     *
+     * @param string[] $events
+     * @param array<mixed> $data
+     *
+     * @return string[]
+     */
+    private function allowedAmong(string $state, array $events, array $data, ?object $subject): array
+    {
+        return array_values(array_filter(
+            $events,
+            fn(string $event) => $this->selectTransition($state, $event, $data, $subject) !== null
+        ));
     }
 
     /**
