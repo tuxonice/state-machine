@@ -32,7 +32,8 @@
         "ext-json": "*",
         "opis/json-schema": "^2.3",
         "psr/container": "^2.0",
-        "psr/event-dispatcher": "^1.0"
+        "psr/event-dispatcher": "^1.0",
+        "psr/clock": "^1.0"
     },
     "suggest": {
         "jbzoo/mermaid-php": "Needed by the Designer to render Mermaid diagrams, see DiagramRenderer to use another library"

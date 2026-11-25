@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tlab\StateMachine;
 
 use DateTimeImmutable;
+use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Tlab\StateMachine\Clock\SystemClock;
 use Tlab\StateMachine\Events\AfterTransition;
 use Tlab\StateMachine\Events\BeforeTransition;
 use Tlab\StateMachine\Events\NullEventDispatcher;
@@ -39,7 +41,8 @@ use Tlab\StateMachine\Storage\StateStorageInterface;
  * Runs events against a state machine definition.
  *
  * Every collaborator is optional. By default conditions and commands are instantiated without
- * arguments, no events are dispatched, and subjects keep their own state (StatefulInterface).
+ * arguments, no events are dispatched, subjects keep their own state (StatefulInterface) and timeouts
+ * follow the system clock.
  */
 class StateMachineRunner
 {
@@ -58,6 +61,8 @@ class StateMachineRunner
 
     private TimeoutScheduler $scheduler;
 
+    private ClockInterface $clock;
+
     public function __construct(
         private StateMachine $stateMachine,
         ?ConditionResolverInterface $conditionResolver = null,
@@ -65,12 +70,14 @@ class StateMachineRunner
         ?EventDispatcherInterface $dispatcher = null,
         ?StateStorageInterface $storage = null,
         ?TimeoutScheduler $scheduler = null,
+        ?ClockInterface $clock = null,
     ) {
         $this->conditionResolver = $conditionResolver ?? new ConditionResolver();
         $this->commandResolver = $commandResolver ?? new CommandResolver();
         $this->dispatcher = $dispatcher ?? new NullEventDispatcher();
         $this->storage = $storage ?? new StatefulStateStorage();
         $this->scheduler = $scheduler ?? new NullTimeoutScheduler();
+        $this->clock = $clock ?? new SystemClock();
     }
 
     /**
@@ -83,6 +90,7 @@ class StateMachineRunner
         ?EventDispatcherInterface $dispatcher = null,
         ?StateStorageInterface $storage = null,
         ?TimeoutScheduler $scheduler = null,
+        ?ClockInterface $clock = null,
     ): self {
         return new self(
             (new DefinitionReader())->read($jsonDefinition),
@@ -91,6 +99,7 @@ class StateMachineRunner
             $dispatcher,
             $storage,
             $scheduler,
+            $clock,
         );
     }
 
@@ -242,7 +251,7 @@ class StateMachineRunner
     {
         $state = $this->stateOf($subject);
         $this->assertStateExists($state);
-        $now ??= new DateTimeImmutable();
+        $now ??= $this->clock->now();
 
         $this->scheduler->cancel($subject);
         foreach ($this->stateMachine->getTimeoutEvents($state) as $event) {
@@ -265,7 +274,7 @@ class StateMachineRunner
      */
     public function processTimeouts(?DateTimeImmutable $now = null): array
     {
-        $now ??= new DateTimeImmutable();
+        $now ??= $this->clock->now();
         $scheduler = $this->scheduler;
         $acknowledging = $scheduler instanceof AcknowledgingTimeoutScheduler;
 

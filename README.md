@@ -323,6 +323,14 @@ exception is the only trace of it. With several workers, `claimDue()` should lea
 do not claim the same timeout. `InMemoryTimeoutScheduler` acknowledges and is meant for tests. Timeouts are ignored
 by default.
 
+Due times come from a PSR-20 clock (`Psr\Clock\ClockInterface`), the system clock by default. Pass your own, such as
+a frozen clock in tests or your framework's clock, to control time: `scheduleTimeouts()` and `processTimeouts()`
+use it when they are called without a time.
+
+```php
+$runner = new StateMachineRunner($machine, scheduler: $scheduler, clock: $clock);
+```
+
 ### Several machines
 
 ```php
