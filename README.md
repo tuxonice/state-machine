@@ -340,6 +340,11 @@ timeouts alone; the reminder's own timeout is used up, so it fires once. The fla
 {"source": "PendingPayment", "target": "PendingPayment", "event": "remind", "keepTimeouts": true}
 ```
 
+One `processTimeouts()` call works through the whole backlog: with an `AcknowledgingTimeoutScheduler` that hands
+out due timeouts in batches, it keeps claiming until nothing new is due, so a worker run once a minute does not
+fall behind. It makes at most `maxBatches` claims (default 100, e.g. `processTimeouts(maxBatches: 10)`), and it does
+not retry a timeout that failed earlier in the same call.
+
 When applying a timeout fails, `processTimeouts()` still tries the other due timeouts, then throws a
 `TimeoutProcessingException` with the results of those applied (`getResults()`) and the ones that failed
 (`getFailures()`, each with its `ScheduledTimeout` and the error).

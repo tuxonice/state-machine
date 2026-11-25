@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tlab\StateMachine;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
 use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use SplObjectStorage;
 use Tlab\StateMachine\Clock\SystemClock;
 use Tlab\StateMachine\Events\AfterTransition;
 use Tlab\StateMachine\Events\BeforeTransition;
@@ -32,6 +34,7 @@ use Tlab\StateMachine\Resolver\ConditionResolverInterface;
 use Tlab\StateMachine\Scheduler\AcknowledgingTimeoutScheduler;
 use Tlab\StateMachine\Scheduler\FailedTimeout;
 use Tlab\StateMachine\Scheduler\NullTimeoutScheduler;
+use Tlab\StateMachine\Scheduler\ScheduledTimeout;
 use Tlab\StateMachine\Scheduler\TimeoutParser;
 use Tlab\StateMachine\Scheduler\TimeoutScheduler;
 use Tlab\StateMachine\Storage\StatefulStateStorage;
@@ -274,29 +277,50 @@ class StateMachineRunner
      * A timeout is skipped when its subject is no longer in the state it was scheduled for. One whose
      * conditions do not pass is dropped, it is not retried.
      *
+     * An AcknowledgingTimeoutScheduler may hand out due timeouts in batches; this keeps claiming until nothing
+     * new is due, so one call works through a backlog. It stops after $maxBatches claims, and when a claim
+     * only returns timeouts this call already tried (a failed one is retried on a later call, not this one).
+     *
+     * @param int $maxBatches the most claims (or pulls) one call makes
+     *
      * @return TransitionResult[] One result per timeout applied
      */
-    public function processTimeouts(?DateTimeImmutable $now = null): array
+    public function processTimeouts(?DateTimeImmutable $now = null, int $maxBatches = 100): array
     {
+        if ($maxBatches < 1) {
+            throw new InvalidArgumentException('maxBatches must be at least 1');
+        }
+
         $now ??= $this->clock->now();
         $scheduler = $this->scheduler;
         $acknowledging = $scheduler instanceof AcknowledgingTimeoutScheduler;
 
         $results = [];
         $failures = [];
-        foreach ($acknowledging ? $scheduler->claimDue($now) : $scheduler->pullDue($now) as $timeout) {
-            try {
-                $subject = $timeout->getSubject();
-                if ($this->storage->read($subject) === $timeout->getState()) {
-                    $results[] = $this->applyTo($subject, $timeout->getEvent());
-                }
+        /** @var SplObjectStorage<ScheduledTimeout, null> $tried */
+        $tried = new SplObjectStorage();
+        for ($batch = 0; $batch < $maxBatches; $batch++) {
+            $due = $acknowledging ? $scheduler->claimDue($now) : $scheduler->pullDue($now);
+            $new = array_filter($due, fn(ScheduledTimeout $timeout) => !$tried->contains($timeout));
+            if ($new === []) {
+                break;
+            }
 
-                // Applied, blocked by its conditions or obsolete: either way it is done with.
-                if ($acknowledging) {
-                    $scheduler->acknowledge($timeout);
+            foreach ($new as $timeout) {
+                $tried->attach($timeout);
+                try {
+                    $subject = $timeout->getSubject();
+                    if ($this->storage->read($subject) === $timeout->getState()) {
+                        $results[] = $this->applyTo($subject, $timeout->getEvent());
+                    }
+
+                    // Applied, blocked by its conditions or obsolete: either way it is done with.
+                    if ($acknowledging) {
+                        $scheduler->acknowledge($timeout);
+                    }
+                } catch (Throwable $error) {
+                    $failures[] = new FailedTimeout($timeout, $error);
                 }
-            } catch (Throwable $error) {
-                $failures[] = new FailedTimeout($timeout, $error);
             }
         }
 

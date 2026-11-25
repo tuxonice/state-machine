@@ -8,6 +8,7 @@ use Tlab\StateMachine\Exceptions\TimeoutProcessingException;
 use Tlab\StateMachine\Scheduler\InMemoryTimeoutScheduler;
 use Tlab\StateMachine\StateMachineRunner;
 use Tlab\StateMachine\TransitionStatus;
+use Tlab\Tests\Support\BatchingTimeoutScheduler;
 use Tlab\Tests\Support\FailingStorage;
 use Tlab\Tests\Support\Order;
 use Tlab\Tests\Support\PullOnlyTimeoutScheduler;
@@ -73,6 +74,67 @@ class TimeoutProcessingTest extends TestCase
         $this->assertCount(1, $results);
         $this->assertSame('Cancelled', $poison->getState());
         $this->assertSame([], $scheduler->all());
+    }
+
+    public function testOneCallWorksThroughEveryBatchThatIsDue(): void
+    {
+        $scheduler = new BatchingTimeoutScheduler(2);
+        $runner = StateMachineRunner::fromJson(
+            (string) file_get_contents(__DIR__ . '/../Fixtures/advanced.json'),
+            scheduler: $scheduler,
+        );
+        $orders = [];
+        for ($i = 0; $i < 5; $i++) {
+            $orders[] = $order = new Order('New');
+            $runner->scheduleTimeouts($order, $this->now);
+        }
+
+        $results = $runner->processTimeouts($this->now->modify('+3 days'));
+
+        $this->assertCount(5, $results);
+        $this->assertSame(['Cancelled'], array_values(array_unique(array_map(fn($o) => $o->getState(), $orders))));
+        $this->assertSame([], $scheduler->inner->all());
+    }
+
+    public function testMaxBatchesCapsTheWorkOfOneCall(): void
+    {
+        $scheduler = new BatchingTimeoutScheduler(2);
+        $runner = StateMachineRunner::fromJson(
+            (string) file_get_contents(__DIR__ . '/../Fixtures/advanced.json'),
+            scheduler: $scheduler,
+        );
+        for ($i = 0; $i < 5; $i++) {
+            $runner->scheduleTimeouts(new Order('New'), $this->now);
+        }
+
+        $results = $runner->processTimeouts($this->now->modify('+3 days'), maxBatches: 2);
+
+        $this->assertCount(4, $results);
+        $this->assertCount(1, $scheduler->inner->all());
+    }
+
+    public function testATimeoutThatFailsAgainIsNotRetriedWithinTheSameCall(): void
+    {
+        $poison = new Order('New');
+        $scheduler = new InMemoryTimeoutScheduler(); // no lease: a failed timeout is claimable again at once
+        $runner = $this->runner($scheduler, new FailingStorage($poison));
+        $runner->scheduleTimeouts($poison, $this->now);
+
+        try {
+            $runner->processTimeouts($this->now->modify('+3 days'));
+            $this->fail('the failure should be reported');
+        } catch (TimeoutProcessingException $e) {
+            $this->assertCount(1, $e->getFailures());
+        }
+        $this->assertCount(1, $scheduler->all());
+    }
+
+    public function testMaxBatchesMustBeAtLeastOne(): void
+    {
+        $runner = $this->runner(new InMemoryTimeoutScheduler(), new FailingStorage(null));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $runner->processTimeouts($this->now, maxBatches: 0);
     }
 
     public function testATimeoutWhoseSubjectLeftTheStateIsAcknowledged(): void
