@@ -72,7 +72,8 @@ This simple structure allows for flexible state management while maintaining cle
 ]
 ```
 
-`source`, `target` and `event` are required. `condition` is optional.
+`source`, `target` and `event` are required. `condition`, `command` and `keepTimeouts` are optional (see
+[Timeouts](#timeouts) for `keepTimeouts`).
 
 ### Conditions
 
@@ -310,6 +311,15 @@ Moving a subject cancels the timeouts of the state it left and schedules those o
 the new state is stored, so a failing `AfterTransition` listener cannot leave a subject without its timeouts.
 A due timeout is skipped when its subject is no longer in the state it was scheduled for, and dropped without a retry
 when its conditions do not pass.
+
+A self-transition (same source and target) is a move too, so by default it restarts all the state's timeouts. That
+suits an event meant to extend a deadline, but not a reminder: a 15-minute reminder that loops back to its state would
+push a 30-minute cancel away every time it fires. Flag such a transition with `keepTimeouts` to leave the running
+timeouts alone; the reminder's own timeout is used up, so it fires once. The flag is only allowed on a self-transition.
+
+```json
+{"source": "PendingPayment", "target": "PendingPayment", "event": "remind", "keepTimeouts": true}
+```
 
 When applying a timeout fails, `processTimeouts()` still tries the other due timeouts, then throws a
 `TimeoutProcessingException` with the results of those applied (`getResults()`) and the ones that failed

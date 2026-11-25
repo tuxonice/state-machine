@@ -428,7 +428,10 @@ class StateMachineRunner
         if ($subject !== null) {
             $this->storage->write($subject, $target);
             // Right after the write, so the stored state always has its own timeouts, even when a listener fails.
-            $this->scheduleTimeouts($subject);
+            // A self-transition flagged keepTimeouts leaves the state's running timeouts as they are.
+            if (!$transition->keepsTimeouts()) {
+                $this->scheduleTimeouts($subject);
+            }
         }
 
         $this->dispatcher->dispatch(new AfterTransition($name, $source, $event, $target, $data, $subject));

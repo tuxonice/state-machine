@@ -52,6 +52,10 @@
           "command": {
             "type": ["string", "null"],
             "description": "Optional command run when this transition is taken, after the event command"
+          },
+          "keepTimeouts": {
+            "type": "boolean",
+            "description": "Only on a transition whose source and target are the same state: keep that state's running timeouts instead of restarting them"
           }
         },
         "required": ["source", "target", "event"],

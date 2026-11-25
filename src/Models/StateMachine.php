@@ -168,13 +168,17 @@ class StateMachine
 
         // Process transitions
         foreach ($this->getTransitions() as $transition) {
-            $result['transitions'][] = [
+            $data = [
                 'source' => $transition->getSource(),
                 'target' => $transition->getTarget(),
                 'event' => $transition->getEvent(),
                 'condition' => $transition->getCondition(),
                 'command' => $transition->getCommand()
             ];
+            if ($transition->keepsTimeouts()) {
+                $data['keepTimeouts'] = true;
+            }
+            $result['transitions'][] = $data;
         }
 
         // Process events

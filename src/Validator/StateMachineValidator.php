@@ -73,6 +73,13 @@ class StateMachineValidator
             if (!in_array($transition->event, $eventList)) {
                 throw new ValidationException("Transition event '{$transition->event}' does not exist in events list");
             }
+
+            if (($transition->keepTimeouts ?? false) === true && $transition->source !== $transition->target) {
+                throw new ValidationException(
+                    "Transition '{$transition->event}' from '{$transition->source}' to '{$transition->target}' "
+                    . 'sets keepTimeouts, which is only allowed when source and target are the same state'
+                );
+            }
         }
 
         return true;

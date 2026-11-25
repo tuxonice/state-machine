@@ -16,6 +16,8 @@ class Transition
 
     private ?string $command;
 
+    private bool $keepTimeouts;
+
     /**
      * @param array<string,mixed> $transitionData
      *
@@ -36,6 +38,7 @@ class Transition
         $this->event = $transitionData['event'];
         $this->condition = $transitionData['condition'] ?? null;
         $this->command = $transitionData['command'] ?? null;
+        $this->keepTimeouts = $transitionData['keepTimeouts'] ?? false;
     }
 
     public function getSource(): string
@@ -61,5 +64,13 @@ class Transition
     public function getCommand(): ?string
     {
         return $this->command;
+    }
+
+    /**
+     * Whether taking this self-transition leaves the state's running timeouts alone instead of restarting them.
+     */
+    public function keepsTimeouts(): bool
+    {
+        return $this->keepTimeouts;
     }
 }
