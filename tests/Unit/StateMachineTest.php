@@ -19,6 +19,7 @@ use Tlab\Tests\Support\ArrayContainer;
 use Tlab\Tests\Support\ConfigurableCondition;
 use Tlab\Tests\Support\Order;
 use Tlab\Tests\Support\RecordingDispatcher;
+use Tlab\StateMachine\TransitionContext;
 
 class StateMachineTest extends TestCase
 {
@@ -196,7 +197,7 @@ class StateMachineTest extends TestCase
         $spy = new class implements CommandInterface {
             public int $runs = 0;
 
-            public function run(array $data): void
+            public function run(TransitionContext $context): void
             {
                 $this->runs++;
             }

@@ -90,7 +90,26 @@ with that transition is being satisfied. This can be modeled in the JSON file th
 }
 ```
 In this case when the transition is triggered, the system will check if the payment is completed. If it is, the transition will be allowed, otherwise it will not be allowed, and the state machine will remain in the current state.
-Conditions can be any class that implements the `ConditionInterface`.
+Conditions can be any class that implements the `ConditionInterface`. Its `check()` receives a `TransitionContext`:
+the transition being considered (`machineName`, `source`, `event`, `target`), the `data` passed by the caller, and the
+`subject`. The subject is `null` when the runner works on a bare state (`apply()`, `can()`, `run()`); with `applyTo()`,
+`canApplyTo()`, onEnter chains and timeouts it is the subject being moved, so a condition can read the subject itself
+instead of trusting an id in `data`.
+
+```php
+use Tlab\StateMachine\Conditions\ConditionInterface;
+use Tlab\StateMachine\TransitionContext;
+
+class PaymentIsCompleted implements ConditionInterface
+{
+    public function check(TransitionContext $context): bool
+    {
+        return $context->subject?->isPaid() ?? false;
+    }
+}
+```
+
+A condition is also called by `can()` and `canApplyTo()`, so it should only read, never change anything.
 
 #### if-else conditions
 
@@ -125,7 +144,7 @@ Note that the two transitions must have the same source and event name. Transiti
 
 ## Events
 
-Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when a transition for the event is taken.
+Events are the triggers that cause state transitions. Each event has a name and an optional command associated with it. The command is a class that implements the `CommandInterface`. Commands are executed when a transition for the event is taken, before the new state is stored, and their `run()` receives the same `TransitionContext` as conditions (the transition taken, the data and the subject).
 
 ```json
 "events": [

@@ -175,7 +175,7 @@ class StateMachineRunner
         $this->assertStateExists($currentState);
         $this->assertEventExists($event);
 
-        return $this->selectTransition($currentState, $event, $data) !== null;
+        return $this->selectTransition($currentState, $event, $data, null) !== null;
     }
 
     /**
@@ -188,7 +188,11 @@ class StateMachineRunner
      */
     public function canApplyTo(object $subject, string $event, array $data = []): bool
     {
-        return $this->can($this->stateOf($subject), $event, $data);
+        $state = $this->stateOf($subject);
+        $this->assertStateExists($state);
+        $this->assertEventExists($event);
+
+        return $this->selectTransition($state, $event, $data, $subject) !== null;
     }
 
     /**
@@ -379,7 +383,7 @@ class StateMachineRunner
             return new TransitionResult(TransitionStatus::NoTransition, $currentState);
         }
 
-        $transition = $this->selectTransition($currentState, $event, $data);
+        $transition = $this->selectTransition($currentState, $event, $data, $subject);
         if ($transition === null) {
             $name = $this->stateMachine->getName();
             $this->dispatcher->dispatch(new TransitionBlocked($name, $currentState, $event, $data, $subject));
@@ -391,7 +395,7 @@ class StateMachineRunner
         $events = [$event];
 
         // Events flagged onEnter fire by themselves as soon as their state is entered.
-        while (($auto = $this->selectOnEnter($state, $data)) !== null) {
+        while (($auto = $this->selectOnEnter($state, $data, $subject)) !== null) {
             if (count($events) > self::MAX_ON_ENTER_TRANSITIONS) {
                 throw OnEnterLoopException::afterTransitions(self::MAX_ON_ENTER_TRANSITIONS, $state);
             }
@@ -423,8 +427,9 @@ class StateMachineRunner
         $target = $transition->getTarget();
         $this->dispatcher->dispatch(new BeforeTransition($name, $source, $event, $target, $data, $subject));
 
-        $this->runCommand($this->stateMachine->getEvent($event)?->getCommand(), $data);
-        $this->runCommand($transition->getCommand(), $data);
+        $context = new TransitionContext($name, $source, $event, $target, $data, $subject);
+        $this->runCommand($this->stateMachine->getEvent($event)?->getCommand(), $context);
+        $this->runCommand($transition->getCommand(), $context);
         if ($subject !== null) {
             $this->storage->write($subject, $target);
             // Right after the write, so the stored state always has its own timeouts, even when a listener fails.
@@ -446,10 +451,10 @@ class StateMachineRunner
      *
      * @return array{string, Transition}|null
      */
-    private function selectOnEnter(string $state, array $data): ?array
+    private function selectOnEnter(string $state, array $data, ?object $subject): ?array
     {
         foreach ($this->stateMachine->getOnEnterEvents($state) as $event) {
-            $transition = $this->selectTransition($state, $event->getName(), $data);
+            $transition = $this->selectTransition($state, $event->getName(), $data, $subject);
             if ($transition !== null) {
                 return [$event->getName(), $transition];
             }
@@ -463,11 +468,17 @@ class StateMachineRunner
      *
      * @param array<mixed> $data
      */
-    private function selectTransition(string $currentState, string $event, array $data): ?Transition
+    private function selectTransition(string $currentState, string $event, array $data, ?object $subject): ?Transition
     {
+        $name = $this->stateMachine->getName();
         foreach ($this->stateMachine->getTransitionsFor($currentState, $event) as $transition) {
             $condition = $transition->getCondition();
-            if ($condition === null || $this->conditionResolver->resolve($condition)->check($data)) {
+            if ($condition === null) {
+                return $transition;
+            }
+
+            $context = new TransitionContext($name, $currentState, $event, $transition->getTarget(), $data, $subject);
+            if ($this->conditionResolver->resolve($condition)->check($context)) {
                 return $transition;
             }
         }
@@ -499,13 +510,10 @@ class StateMachineRunner
         }
     }
 
-    /**
-     * @param array<mixed> $data
-     */
-    private function runCommand(?string $command, array $data): void
+    private function runCommand(?string $command, TransitionContext $context): void
     {
         if ($command !== null) {
-            $this->commandResolver->resolve($command)->run($data);
+            $this->commandResolver->resolve($command)->run($context);
         }
     }
 }

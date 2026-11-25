@@ -77,13 +77,15 @@ Event handlers are PHP classes that implement the `CommandInterface`. They conta
 namespace App\Commands;
 
 use Tlab\StateMachine\Commands\CommandInterface;
+use Tlab\StateMachine\TransitionContext;
 
 class ShipOrderCommand implements CommandInterface
 {
-    public function execute(array $eventData): void
+    public function run(TransitionContext $context): void
     {
-        // Business logic to ship the order
-        $orderId = $eventData['order_id'];
+        // Business logic to ship the order: the subject is the order being moved (null with apply()),
+        // $context->data is what the caller passed, $context->source/event/target describe the transition.
+        $order = $context->subject;
         // ... shipping logic ...
     }
 }

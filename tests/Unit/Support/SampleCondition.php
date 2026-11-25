@@ -3,15 +3,11 @@
 namespace Tlab\Tests\Support;
 
 use Tlab\StateMachine\Conditions\ConditionInterface;
+use Tlab\StateMachine\TransitionContext;
 
 class SampleCondition implements ConditionInterface
 {
-    /**
-     * @param array<mixed> $data
-     *
-     * @return bool
-     */
-    public function check(array $data): bool
+    public function check(TransitionContext $context): bool
     {
         return true;
     }
